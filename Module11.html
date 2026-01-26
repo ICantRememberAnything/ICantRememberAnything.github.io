@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 11 - Offline Quiz</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz</h2>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="updateChapterSize()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All questions</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+</div>
+
+
+<div id="quiz"></div>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapter:"ATA 42",q:"1. The IMA is stand for (Level 1)",options:["A. Indicated Module Aircraft","B. Integrated Modular avionics","C. Integrated Modular Audio"],answer:1},
+{chapter:"ATA 42",q:"2. Aircraft with IMA can realize reductions in the bulk and ... of their avionics systems? (Level 1)",options:["A. Weight","B. Power","C. Data"],answer:0},
+{chapter:"ATA 42",q:"3. Does an aircraft with IMA need more supplies or less supplies than the aircraft traditional (non-IMA)? (Level 1)",options:["A. more supplies","B. less supplies","C. The same as"],answer:1},
+{chapter:"ATA 42",q:"4. Traditionally, on non-IMA aircraft, each avionics system had (Level 1)",options:["A. its own separate indicator and its own separate controls","B. own separate indicator","C. own separate controls"],answer:0},
+{chapter:"ATA 42",q:"5. The use of ...indicators saves space and weight, and it streamlines pilot workload by reducing the number of indicators that must be scanned during flight. (Level 1)",options:["A. Integrated","B. Moduled","C. independing"],answer:0},
+{chapter:"ATA 42",q:"6. An IMA aircraft might have (Level 1)",options:["A. Only one power supply that is capable of supplying all twenty modules.","B. Two redundant power supplies that are each capable of supplying all twenty modules.","C. Three redundant power supplies that are each capable of supplying all twenty modules."],answer:2},
+{chapter:"ATA 42",q:"7. IMA aircraft are typically ... fault-tolerant than traditional aircraft. (Level 1)",options:["A. more","B. less","C. no"],answer:0},
+{chapter:"ATA 42",q:"8. If one of the IMA power supplies fails (Level 1)",options:["A. The relate modules are lost","B. There are still two redundant power supplies that can power the modules","C. The IMA system fails"],answer:1},
+{chapter:"ATA 42",q:"9. With IMA, the data processing circuitry can be contained in (Level 1)",options:["A. More LRUs (modules)","B. All LRUs (modules)","C. Fewer LRUs (modules)"],answer:2},
+{chapter:"ATA 42",q:"10. The use of digital data buses... the amount of wiring used in an aircraft. (Level 1)",options:["A. reduces","B. increase","C. Don't use wires, use wifi connection"],answer:0},
+{chapter:"ATA 42",q:"11. The wires inside the braided shield of an ARINC 429 data bus are referred to as a …. (Level 1)",options:["A. twisted pair","B. twisted pair with grounded wire","C. twisted pair with not  grounded wire"],answer:0},
+{chapter:"ATA 42",q:"12. ARINC 629 can transfer up to (Level 1)",options:["A. One hundred million bits per second","B. 1 million bits per second","C. Two million bits per second"],answer:2},
+{chapter:"ATA 42",q:"13. ARINC 429 can transfer up to ... bits of information each second (Level 1)",options:["A. 100 000","B. 100 million","C. two million"],answer:0},
+{chapter:"ATA 42",q:"14. AFDX is a newer digital data bus system used that can transfer data at rates up to (Level 1)",options:["A. 1 million bits per second","B. 100 million bits per second","C. 100000 bits per second"],answer:1},
+{chapter:"ATA 42",q:"15. IMA systems consist of (Level 1)",options:["A. A central system and peripherals","B. a core system and LRUs (Line Replaceable Units)","C. a core system and network components"],answer:2},
+{chapter:"ATA 42",q:"16. The ...uses the same computer processors for many different purposes (Level 1)",options:["A. core system","B. avinonic system","C. network system"],answer:0},
+{chapter:"ATA 42",q:"17. The core system contains data processing circuitry that processes (Level 1)",options:["A. Specific kind of information","B. Many different kinds of information","C. Flight information"],answer:1},
+{chapter:"ATA 42",q:"18. ... include input and output devices and data bus wiring. (Level 1)",options:["A. Network components","B. core system","C. digital data bus"],answer:0},
+{chapter:"ATA 42",q:"19. What is the function of NETWORK COMPONENTS? (Level 1)",options:["A. allow data to be transferred into and out of the core system","B. allow data to be transferred into and out of the modules","C. conecting with IMAs"],answer:0},
+{chapter:"ATA 42",q:"20. The LRM is stand for (Level 1)",options:["A. Line replaceable memory","B. Line replaceable module","C. Line repaire manual"],answer:1},
+{chapter:"ATA 42",q:"21. In Boeing B777, AIMS stands for (Level 1)",options:["A. airplane information management system","B. airspace  information management system","C. American Immigration & Multi Services"],answer:0},
+{chapter:"ATA 42",q:"22. The AIMS is interconnected with many other units in the aircraft (Level 1)",options:["A. It receives input data from these units only","B. it provides output data to them only","C. It receives input data from these units and it provides output data to them"],answer:2},
+{chapter:"ATA 42",q:"23. The AIMS displays information on (Level 1)",options:["A. Two flat-panel display units (DUs)","B. Six flat-panel display units (DUs)","C. Four flat-panel display units (DUs)"],answer:1},
+{chapter:"ATA 42",q:"24. The basic features of IMA are: (Level 1)",options:["A. Modular design, Integration of modules within the system and Flexibility","B. Modular design, Integration of modules within the system and Use of digital data buses for interconnection","C. Modular design, Integration of modules within the system, Use of digital data buses for interconnection, Fault tolerance and Flexibility"],answer:2},
+{chapter:"ATA 42",q:"30. Which of the following statements is correct? (No Level)",options:["A. Traditional (non-IMA) avionics suites have many separate LRUs ('black boxes') located in an avionics compartment","B. IMA aircraft avionics suites have many separate LRUs ('black boxes') located in an avionics compartment","C. each black box in the avionics compartment typically integrated modular  power supply"],answer:0},
+{chapter:"ATA 42",q:"44. An advantage of partitioning in an open loop concept IMA system is? (No Level)",options:["A. more LRUs","B. Ease of configuration.","C. More wiring"],answer:1},
+{chapter:"ATA 42",q:"1. AFDX in comparison to other data transfer formats, such as ARINC 629 and ARINC 429, has? (Level 1)",options:["A. Much higher data capability, reliability and fault tolerance.","B. Much higher data capability, reliability","C. Much higher data capability, fault tolerance."],answer:0},
+{chapter:"ATA 42",q:"5. A 'Backplane' is a? (Level 1)",options:["A. A propriety DEOS operating system","B. System that is used for inter-module communication within a cabinet.","C. An Independent Modules"],answer:1},
+{chapter:"ATA 42_FULL",q:"1. The IMA is stand for (Level 1)",options:["Indicated Module Aircraft","Integrated Modular avionics","Integrated Modular Audio"],answer:1},
+{chapter:"ATA 42_FULL",q:"2. Aircraft with IMA can realize reductions in the bulk and ... of their avionics systems? (Level 1)",options:["Weight","Power","Data"],answer:0},
+{chapter:"ATA 42_FULL",q:"3. Does an aircraft with IMA need more supplies or less supplies than the aircraft traditional (non-IMA)? (Level 1)",options:["more supplies","less supplies","The same as"],answer:1},
+{chapter:"ATA 42_FULL",q:"4. Traditionally, on non-IMA aircraft, each avionics system had (Level 1)",options:["its own separate indicator and its own separate controls","own separate indicator","own separate controls"],answer:0},
+{chapter:"ATA 42_FULL",q:"5. The use of ...indicators saves space and weight, and it streamlines pilot workload by reducing the number of indicators that must be scanned during flight. (Level 1)",options:["Integrated","Moduled","independing"],answer:0},
+{chapter:"ATA 42_FULL",q:"6. An IMA aircraft might have (Level 1)",options:["Only one power supply that is capable of supplying all twenty modules.","Two redundant power supplies that are each capable of supplying all twenty modules.","Three redundant power supplies that are each capable of supplying all twenty modules."],answer:2},
+{chapter:"ATA 42_FULL",q:"7. IMA aircraft are typically ... fault-tolerant than traditional aircraft. (Level 1)",options:["more","less","no"],answer:0},
+{chapter:"ATA 42_FULL",q:"8. If one of the IMA power supplies fails (Level 1)",options:["The relate modules are lost","There are still two redundant power supplies that can power the modules","The IMA system fails"],answer:1},
+{chapter:"ATA 42_FULL",q:"9. With IMA, the data processing circuitry can be contained in (Level 1)",options:["More LRUs (modules)","All LRUs (modules)","Fewer LRUs (modules)"],answer:2},
+{chapter:"ATA 42_FULL",q:"10. The use of digital data buses... the amount of wiring used in an aircraft. (Level 1)",options:["reduces","increase","Don't use wires, use wifi connection"],answer:0},
+{chapter:"ATA 42_FULL",q:"11. The wires inside the braided shield of an ARINC 429 data bus are referred to as a …. (Level 1)",options:["twisted pair","twisted pair with grounded wire","twisted pair with not  grounded wire"],answer:0},
+{chapter:"ATA 42_FULL",q:"12. ARINC 629 can transfer up to (Level 1)",options:["One hundred million bits per second","1 million bits per second","Two million bits per second"],answer:2},
+{chapter:"ATA 42_FULL",q:"13. ARINC 429 can transfer up to ... bits of information each second (Level 1)",options:["100 000","100 million","two million"],answer:0},
+{chapter:"ATA 42_FULL",q:"14. AFDX is a newer digital data bus system used that can transfer data at rates up to (Level 1)",options:["1 million bits per second","100 million bits per second","100000 bits per second"],answer:1},
+{chapter:"ATA 42_FULL",q:"15. IMA systems consist of (Level 1)",options:["A central system and peripherals","a core system and LRUs (Line Replaceable Units)","a core system and network components"],answer:2},
+{chapter:"ATA 42_FULL",q:"16. The ...uses the same computer processors for many different purposes (Level 1)",options:["core system","avinonic system","network system"],answer:0},
+{chapter:"ATA 42_FULL",q:"17. The core system contains data processing circuitry that processes (Level 1)",options:["Specific kind of information","Many different kinds of information","Flight information"],answer:1},
+{chapter:"ATA 42_FULL",q:"18. ... include input and output devices and data bus wiring. (Level 1)",options:["Network components","core system","digital data bus"],answer:0},
+{chapter:"ATA 42_FULL",q:"19. What is the function of NETWORK COMPONENTS? (Level 1)",options:["allow data to be transferred into and out of the core system","allow data to be transferred into and out of the modules","conecting with IMAs"],answer:0},
+{chapter:"ATA 42_FULL",q:"20. The LRM is stand for (Level 1)",options:["Line replaceable memory","Line replaceable module","Line repaire manual"],answer:1},
+{chapter:"ATA 42_FULL",q:"21. In Boeing B777, AIMS stands for (Level 1)",options:["airplane information management system","airspace  information management system","American Immigration & Multi Services"],answer:0},
+{chapter:"ATA 42_FULL",q:"22. The AIMS is interconnected with many other units in the aircraft (Level 1)",options:["It receives input data from these units only","it provides output data to them only","It receives input data from these units and it provides output data to them"],answer:2},
+{chapter:"ATA 42_FULL",q:"23. The AIMS displays information on (Level 1)",options:["Two flat-panel display units (DUs)","Six flat-panel display units (DUs)","Four flat-panel display units (DUs)"],answer:1},
+{chapter:"ATA 42_FULL",q:"24. The basic features of IMA are: (Level 1)",options:["Modular design, Integration of modules within the system and Flexibility","Modular design, Integration of modules within the system and Use of digital data buses for interconnection","Modular design, Integration of modules within the system, Use of digital data buses for interconnection, Fault tolerance and Flexibility"],answer:2},
+{chapter:"ATA 42_FULL",q:"25. IMA systems can be categorized into functions of? (Level 2)",options:["Cabin, utilities and cockpit.","Monitoring, indication and control","Cabin, cocpit, air-conditioning and other systems"],answer:0},
+{chapter:"ATA 42_FULL",q:"26. Which of the following statements is correct? (Level 2)",options:["on non-IMA aircraft, more indicators and controls had to be installed","on IMA aircraft, more indicators and controls had to be installed","IMA aircrafts are outdated systems"],answer:0},
+{chapter:"ATA 42_FULL",q:"27. On Non-IMA aircraft, more electrical power is required to operate the system (Level 2)",options:["TRUE","Not true","Not mentioned"],answer:0},
+{chapter:"ATA 42_FULL",q:"28. What are the advantages of using the IMA integrated system? (Level 2)",options:["Reduces workload for pilots","More comfort for pilots","airplanes can fly faster"],answer:0},
+{chapter:"ATA 42_FULL",q:"29. The IMA (Integrated Modular avionics) perform (Level 2)",options:["The functions formerly performed by the independent LRUs, completely independent.","The functions formerly performed by the independent LRUs, but they are not  independent.","The functions formerly performed by the independent LRUs, but they are not completely independent. They share circuitry."],answer:2},
+{chapter:"ATA 42_FULL",q:"30. Which of the following statements is correct? (No Level)",options:["Traditional (non-IMA) avionics suites have many separate LRUs ('black boxes') located in an avionics compartment","IMA aircraft avionics suites have many separate LRUs ('black boxes') located in an avionics compartment","each black box in the avionics compartment typically integrated modular  power supply"],answer:0},
+{chapter:"ATA 42_FULL",q:"31. In the IMA aircraft. All avionics modules do not afected by failure of (Level 2)",options:["One of the power supply","One or even two of the power supplies","Three of the power supplies"],answer:1},
+{chapter:"ATA 42_FULL",q:"32. What Digital data buses are more important others? (Level 2)",options:["ARINC 429, ARINC 629, and ARINC 628","ARINC 429 and AFDX (Avionics Full Duplex).","ARINC 429, ARINC 629, and AFDX (Avionics Full Duplex)."],answer:2},
+{chapter:"ATA 42_FULL",q:"33. What is correct with traditional avionics systems? (Level 2)",options:["Each piece of information to be transferred from one location to another requires at least one separate wire","Information can be transferred using only two wires","Often, a smaller number of wires is needed"],answer:0},
+{chapter:"ATA 42_FULL",q:"34. The core system's processing power is shared among various functions (Level 2)",options:["This sharing need to have a processor in each and every system","This sharing eliminates the need to have a processor in each and every system","This sharing only in the same system"],answer:1},
+{chapter:"ATA 42_FULL",q:"35. In Boeing 777. The primary data transfer format used by the AIMS is (Level 2)",options:["ARINC 629","AFDX","ARINC 429"],answer:0},
+{chapter:"ATA 42_FULL",q:"36. How many digital data transfer formats which the AIMS uses  for sending and receiving information? (Level 2)",options:["Two","Four","Six"],answer:2},
+{chapter:"ATA 42_FULL",q:"37. Why IMA aircraft are more fault tolerant, providing better reliability? (Level 3)",options:["There are Redundant Power supplies","Fewer wires reduce errors","Many backup modules for others"],answer:0},
+{chapter:"ATA 42_FULL",q:"38. Why do aircraft with IMA significantly reduce aircraft weight? (Level 3)",options:["All parts on the plane are connected by wireless","Use common power for modules, use of digital data buses","All modules in Avionic are integrated into two Modules"],answer:1},
+{chapter:"ATA 42_FULL",q:"39. AFDX in comparison to other data transfer formats, such as ARINC 629 and ARINC 429, has? (Level 3)",options:["More data than Non-IMA Aircraft","Much lower data capability, reliability and fault tolerance.","Much higher data capability, reliability and fault tolerance."],answer:2},
+{chapter:"ATA 42_FULL",q:"40. Which of the following statements is correct? (Level 3)",options:["AFDX has characteristics of: good integration and ease of interfacing; reduction in cable interconnects and wiring; high bandwidth; high reliability and fault tolerances.","ARINC 629 has characteristics of: good integration and ease of interfacing; reduction in cable interconnects and wiring; high bandwidth; high reliability and fault tolerances.","ARINC 429 has characteristics of: good integration and ease of interfacing; reduction in cable interconnects and wiring; high bandwidth; high reliability and fault tolerances."],answer:0},
+{chapter:"ATA 42_FULL",q:"41. The internal data transfer format for CPIOM (core processor input/output modules) in IMA systems is? (Level 3)",options:["AFDX","ARINC 653.","AFDX 653"],answer:1},
+{chapter:"ATA 42_FULL",q:"42. Partitioning of Core-processor computers in IMA systems is? (Level 3)",options:["Isolation of each IMA system to prevent interaction.","conect of each application system to interaction.","Isolation of each application system to prevent interaction."],answer:2},
+{chapter:"ATA 42_FULL",q:"43. Open IMA concept was developed for the (Level 3)",options:["Airbus 380","Airbus 350","Boeing B787"],answer:0},
+{chapter:"ATA 42_FULL",q:"44. An advantage of partitioning in an open loop concept IMA system is? (No Level)",options:["more LRUs","Ease of configuration.","More wiring"],answer:1},
+{chapter:"ATA 42_FULL",q:"1. AFDX in comparison to other data transfer formats, such as ARINC 629 and ARINC 429, has? (Level 1)",options:["Much higher data capability, reliability and fault tolerance.","Much higher data capability, reliability","Much higher data capability, fault tolerance."],answer:0},
+{chapter:"ATA 42_FULL",q:"2. The DUs give the following types of displays: (Level 2)",options:["PFD, ND, EICAS","PFD, ND, EICAS, MFD","ND, EICAS, MFD"],answer:1},
+{chapter:"ATA 42_FULL",q:"3. A format that uses duplex switching for data transfer between modules is? (Level 3)",options:["AIMS","IMA","AFDX"],answer:2},
+{chapter:"ATA 42_FULL",q:"4. Network components are the parts of the IMA system that allow: (Level 2)",options:["Data to be transferred into and out of the core system","Data to be transferred into the core system","Data to be transferred out of the core system"],answer:0},
+{chapter:"ATA 42_FULL",q:"5. A 'Backplane' is a? (Level 1)",options:["A propriety DEOS operating system","System that is used for inter-module communication within a cabinet.","An Independent Modules"],answer:1},
+{chapter:"ATA 42_FULL",q:"6. The internal data transfer format for core-processor computers in IMA systems is? (Level 2)",options:["ARINC 653","ARINC 664","ARINC 429"],answer:0},
+{chapter:"ATA 42_FULL",q:"7. IMA systems can be categorized into functions of? (Level 3)",options:["Cabin, utilities","Utilities and cockpit","Cabin, utilities and cockpit"],answer:1},
+{chapter:"ATA 44",q:"1. Which system providing communication within the aircraft? (Level 1)",options:["A. The Cabin Intercommunication Data System (CIDS)","B. The Cabin Network Service (CNS)","C. The Cabin Inflight Entertaiment System (IFE)"],answer:0},
+{chapter:"ATA 44",q:"2. Which system providing communication between the aircraft cabin and ground stations? (Level 1)",options:["A. The Cabin Intercommunication Data System (CIDS)","B. The Cabin Network Service (CNS)","C. The Cabin Inflight Entertaiment System (IFE)"],answer:1},
+{chapter:"ATA 44",q:"3. The Cabin Intercommunication Data System provides an interface between (Level 1)",options:["A. Cockpit and cabin systems","B. Cabin crew and cabin systems","C. Cockpit/cabin crew and cabin systems"],answer:2},
+{chapter:"ATA 44",q:"4. Cabin Systems are used to communicate (Level 1)",options:["A. Both within the aircraft cabin and between the cabin and the cockpit","B. Within the aircraft cabin","C. Between the cabin and the cockpit"],answer:0},
+{chapter:"ATA 44",q:"5. The Cabin Systems also include (Level 1)",options:["A. System for inflight entertainment (IFE) of passengers.","B. System used by passengers to communicate with the ground.","C. Systems for inflight entertainment (IFE) of passengers, and systems used by passengers to communicate with the ground."],answer:2},
+{chapter:"ATA 44",q:"6. Older aircraft cabin systems used (Level 1)",options:["A. digital electronics","B. analog electronics","C. Both analog and digital electronics"],answer:1},
+{chapter:"ATA 44",q:"7. A cabin intercommunication data system is used by (Level 1)",options:["A. Flight attendants","B. Flight attendants and passengers","C. Flight attendants, pilots, and passengers"],answer:2},
+{chapter:"ATA 44",q:"8. A cabin network service is (Level 1)",options:["A. A digital system that is typically hosted on a server within the aircraft","B. An analog system that is typically hosted on a server within the aircraft","C. A digital or analog system that is typically hosted on a server within the aircraft"],answer:0},
+{chapter:"ATA 44",q:"9. In Boeing 777. The cabin service system includes (Level 1)",options:["A. both the cabin intercommunication data system and the inflight entertaiment system.","B. both the cabin intercommunication data system and the cabin network service. ","C. both the cabin network service and the inflight entertaiment system."],answer:1},
+{chapter:"ATA 44",q:"10. In Boeing 777. The cabin service system uses (Level 1)",options:["A. Only one data bus system.","B. Two different data bus systems","C. Three different data bus systems"],answer:2},
+{chapter:"ATA 44",q:"11. The central processor of the Boeing 777 cabin service system is (Level 1)",options:["A. The cabin systems management unit (CSMU)","B. The cabin central processor unit (CCPU)","C. The Directors"],answer:0},
+{chapter:"ATA 44",q:"12. The IFE equipment of each Boeing 777 passenger seat typically includes (Level 1)",options:["A. A video display and an audio headphone jack.","B. A video display, an audio headphone jack, and controls for selecting specific video or audio content to be enjoyed by the passenger.","C. A video display  and controls for selecting specific video or audio content to be enjoyed by the passenger."],answer:1},
+{chapter:"ATA 44",q:"13. The data routes from the IFE computer to the individual passenger seats  through. (Level 1)",options:["A. The CSMU (Cabin systems management unit)","B. The ZMUs (Zone management units)","C. The CSMU and the ZMUs,"],answer:2},
+{chapter:"ATA 44",q:"14. The aircraft's external communication system is used to connect with (Level 1)",options:["A. A ground-based network.","B. A satellite-based network.","C. Either a ground-based network or a satellite-based network."],answer:0},
+{chapter:"ATA 44",q:"15. For the aircraft's external communication system connect with satellite-based network. The antenna (Level 1)",options:["A. Will be mounted on the lower surface of the aircraft, usually on the belly of the fuselage.","B. Will be mounted on the lower surface of the aircraft or on the upper surface of the aircraft","C. Must be mounted to the upper surface of the aircraft"],answer:2},
+{chapter:"ATA 44",q:"16. For the aircraft's external communication system connect with ground-based network. The antenna (Level 1)",options:["A. Will be mounted on the lower surface of the aircraft, usually on the belly of the fuselage.","B. Will be mounted on the lower surface of the aircraft or on the upper surface of the aircraft","C. Must be mounted to the upper surface of the aircraft"],answer:0},
+{chapter:"ATA 44",q:"17. Ground-based networks use (Level 1)",options:["A. Internet to communicate with the aircraft.","B. Wired towers to communicate with the aircraft.","C. Radio towers to communicate with the aircraft."],answer:2},
+{chapter:"ATA 44",q:"18. The cabin mass memory system is (Level 1)",options:["A. Where allow controls the cabin system.","B. Where the data that is used in the cabin is stored.","C. Central processor of cabin system"],answer:1},
+{chapter:"ATA 44",q:"19. Which following statement is correct for cabin mass memory system? (Level 1)",options:["A. The mass memory system can be programmed with cabin configuration information.","B. The mass memory system can not be programmed with cabin configuration information.","C. The mass memory system can be programmed with cockpit configuration information."],answer:0},
+{chapter:"ATA 44",q:"20. Which following statement is correct for cabin mass memory system? (No Level)",options:["A. The system can not be updated.","B. The system can be updated, when necessary, through a data loading system.","C. The system can be automatically updated."],answer:1},
+{chapter:"ATA 44",q:"21. Cabin monitoring systems are used to (Level 1)",options:["A. Monitor the cabin crews.","B. Monitor the passenger in cabin.","C. Monitor various conditions in the passenger cabin."],answer:2},
+{chapter:"ATA 44",q:"22. In the Cabin monitoring systems. Information about the conditions being monitored can be accessed by (Level 1)",options:["A. Passengers in real time.","B. Flight attendants in real time.","C. Maintenance staffs only"],answer:1},
+{chapter:"ATA 44",q:"23. In the Cabin monitoring systems. Information about the conditions can also be stored and accessed later for (Level 1)",options:["A. Troubleshooting","B. Trend monitoring","C. Purposes such as troubleshooting and trend monitoring."],answer:2},
+{chapter:"ATA 44",q:"24. The cabin Wi-Fi, which allows passengers (Level 1)",options:["A. To connect their own personal devices to an on-board Wi-Fi system.","B. To connect cabin system devices to an on-board Wi-Fi system.","C. To connect their own personal devices to cabin interphone system."],answer:0},
+{chapter:"ATA 44",q:"1. A cabin intercommunication data system is used by? (Level 1)",options:["A. Flight attendants, Pilots, and Passengers","B. Flight attendants, Pilots","C. Pilots, and Passengers"],answer:0},
+{chapter:"ATA 44",q:"2. What is the central processor of the cabin services system? (Level 1)",options:["A. ZMU","B. CSS","C. CSMU"],answer:2},
+{chapter:"ATA 44_FULL",q:"1. Which system providing communication within the aircraft? (Level 1)",options:["The Cabin Intercommunication Data System (CIDS)","The Cabin Network Service (CNS)","The Cabin Inflight Entertaiment System (IFE)"],answer:0},
+{chapter:"ATA 44_FULL",q:"2. Which system providing communication between the aircraft cabin and ground stations? (Level 1)",options:["The Cabin Intercommunication Data System (CIDS)","The Cabin Network Service (CNS)","The Cabin Inflight Entertaiment System (IFE)"],answer:1},
+{chapter:"ATA 44_FULL",q:"3. The Cabin Intercommunication Data System provides an interface between (Level 1)",options:["Cockpit and cabin systems","Cabin crew and cabin systems","Cockpit/cabin crew and cabin systems"],answer:2},
+{chapter:"ATA 44_FULL",q:"4. Cabin Systems are used to communicate (Level 1)",options:["Both within the aircraft cabin and between the cabin and the cockpit","Within the aircraft cabin","Between the cabin and the cockpit"],answer:0},
+{chapter:"ATA 44_FULL",q:"5. The Cabin Systems also include (Level 1)",options:["System for inflight entertainment (IFE) of passengers.","System used by passengers to communicate with the ground.","Systems for inflight entertainment (IFE) of passengers, and systems used by passengers to communicate with the ground."],answer:2},
+{chapter:"ATA 44_FULL",q:"6. Older aircraft cabin systems used (Level 1)",options:["digital electronics","analog electronics","Both analog and digital electronics"],answer:1},
+{chapter:"ATA 44_FULL",q:"7. A cabin intercommunication data system is used by (Level 1)",options:["Flight attendants","Flight attendants and passengers","Flight attendants, pilots, and passengers"],answer:2},
+{chapter:"ATA 44_FULL",q:"8. A cabin network service is (Level 1)",options:["A digital system that is typically hosted on a server within the aircraft","An analog system that is typically hosted on a server within the aircraft","A digital or analog system that is typically hosted on a server within the aircraft"],answer:0},
+{chapter:"ATA 44_FULL",q:"9. In Boeing 777. The cabin service system includes (Level 1)",options:["both the cabin intercommunication data system and the inflight entertaiment system.","both the cabin intercommunication data system and the cabin network service. ","both the cabin network service and the inflight entertaiment system."],answer:1},
+{chapter:"ATA 44_FULL",q:"10. In Boeing 777. The cabin service system uses (Level 1)",options:["Only one data bus system.","Two different data bus systems","Three different data bus systems"],answer:2},
+{chapter:"ATA 44_FULL",q:"11. The central processor of the Boeing 777 cabin service system is (Level 1)",options:["The cabin systems management unit (CSMU)","The cabin central processor unit (CCPU)","The Directors"],answer:0},
+{chapter:"ATA 44_FULL",q:"12. The IFE equipment of each Boeing 777 passenger seat typically includes (Level 1)",options:["A video display and an audio headphone jack.","A video display, an audio headphone jack, and controls for selecting specific video or audio content to be enjoyed by the passenger.","A video display  and controls for selecting specific video or audio content to be enjoyed by the passenger."],answer:1},
+{chapter:"ATA 44_FULL",q:"13. The data routes from the IFE computer to the individual passenger seats  through. (Level 1)",options:["The CSMU (Cabin systems management unit)","The ZMUs (Zone management units)","The CSMU and the ZMUs,"],answer:2},
+{chapter:"ATA 44_FULL",q:"14. The aircraft's external communication system is used to connect with (Level 1)",options:["A ground-based network.","A satellite-based network.","Either a ground-based network or a satellite-based network."],answer:0},
+{chapter:"ATA 44_FULL",q:"15. For the aircraft's external communication system connect with satellite-based network. The antenna (Level 1)",options:["Will be mounted on the lower surface of the aircraft, usually on the belly of the fuselage.","Will be mounted on the lower surface of the aircraft or on the upper surface of the aircraft","Must be mounted to the upper surface of the aircraft"],answer:2},
+{chapter:"ATA 44_FULL",q:"16. For the aircraft's external communication system connect with ground-based network. The antenna (Level 1)",options:["Will be mounted on the lower surface of the aircraft, usually on the belly of the fuselage.","Will be mounted on the lower surface of the aircraft or on the upper surface of the aircraft","Must be mounted to the upper surface of the aircraft"],answer:0},
+{chapter:"ATA 44_FULL",q:"17. Ground-based networks use (Level 1)",options:["Internet to communicate with the aircraft.","Wired towers to communicate with the aircraft.","Radio towers to communicate with the aircraft."],answer:2},
+{chapter:"ATA 44_FULL",q:"18. The cabin mass memory system is (Level 1)",options:["Where allow controls the cabin system.","Where the data that is used in the cabin is stored.","Central processor of cabin system"],answer:1},
+{chapter:"ATA 44_FULL",q:"19. Which following statement is correct for cabin mass memory system? (Level 1)",options:["The mass memory system can be programmed with cabin configuration information.","The mass memory system can not be programmed with cabin configuration information.","The mass memory system can be programmed with cockpit configuration information."],answer:0},
+{chapter:"ATA 44_FULL",q:"20. Which following statement is correct for cabin mass memory system? (No Level)",options:["The system can not be updated.","The system can be updated, when necessary, through a data loading system.","The system can be automatically updated."],answer:1},
+{chapter:"ATA 44_FULL",q:"21. Cabin monitoring systems are used to (Level 1)",options:["Monitor the cabin crews.","Monitor the passenger in cabin.","Monitor various conditions in the passenger cabin."],answer:2},
+{chapter:"ATA 44_FULL",q:"22. In the Cabin monitoring systems. Information about the conditions being monitored can be accessed by (Level 1)",options:["Passengers in real time.","Flight attendants in real time.","Maintenance staffs only"],answer:1},
+{chapter:"ATA 44_FULL",q:"23. In the Cabin monitoring systems. Information about the conditions can also be stored and accessed later for (Level 1)",options:["Troubleshooting","Trend monitoring","Purposes such as troubleshooting and trend monitoring."],answer:2},
+{chapter:"ATA 44_FULL",q:"24. The cabin Wi-Fi, which allows passengers (Level 1)",options:["To connect their own personal devices to an on-board Wi-Fi system.","To connect cabin system devices to an on-board Wi-Fi system.","To connect their own personal devices to cabin interphone system."],answer:0},
+{chapter:"ATA 44_FULL",q:"25. Which systems support data exchange of the different related LRU's and they are typically operated via Flight Attendant Panels. (Level 2)",options:["The Cabin Intercommunication Data System (CIDS) ","The Cabin Inflight Entertaiment System (IFE)","The Cabin Network Service (CNS)"],answer:0},
+{chapter:"ATA 44_FULL",q:"26. Cabin Core System are include: (Level 2)",options:["Inflight Entertainment System; External Communication System; Cabin Mass Memory System.","Inflight Entertainment System; External Communication System; Miscellaneous Cabin System.","Inflight Entertainment System; External Communication System; Cabin Mass Memory System; Cabin Monitoring System; Miscellaneous Cabin System."],answer:2},
+{chapter:"ATA 44_FULL",q:"27. Which system used for addressing passengers through overhead cabin speakers? (Level 2)",options:["Cabin Interphone","Passenger Address","Flight Attendant Calling"],answer:1},
+{chapter:"ATA 44_FULL",q:"28. Which system used for communication among the cabin crew members, and also between the cabin and the flight deck? (Level 2)",options:["Flight Attendant Calling","Passenger Address","Cabin Interphone"],answer:2},
+{chapter:"ATA 44_FULL",q:"29. Which system allows passengers to call for assistance from the cabin crew? (Level 2)",options:["Flight Attendant Calling","Cabin Interphone","Passenger Address"],answer:0},
+{chapter:"ATA 44_FULL",q:"30. Which system showing the aircraft's current location, altitude, and airspeed (Level 2)",options:["The Indication System","Moving Map Displays","The Display System"],answer:1},
+{chapter:"ATA 44_FULL",q:"31. A cabin network service is essentially (Level 2)",options:["A cabin telephone","A cabin computer","A computer Local Area Network (LAN) within the aircraft"],answer:2},
+{chapter:"ATA 44_FULL",q:"32. Operation of thecabin network service wireless systems is (Level 2)",options:["Not permitted during takeoffs and landings.","Not permitted during flight.","Not permitted during takeoffs."],answer:0},
+{chapter:"ATA 44_FULL",q:"33. The three different data bus systems used in  Boeing 777 cabin service system are (Level 2)",options:["ARINC 629, the ARINC 429 and ARINC 628.","ARINC 629, the CSS Intersystem Bus and ARINC 628. ","ARINC 429, the CSS Intersystem Bus, and ARINC 628."],answer:1},
+{chapter:"ATA 44_FULL",q:"34. Which bus the Boeing 777 cabin service system connects to the aircraft information management system (AIMS)? (Level 2)",options:["The ARINC 629 bus","The CSS Intersystem Bus","The ARINC 628 bus"],answer:0},
+{chapter:"ATA 44_FULL",q:"35. Which bus is a data transfer bus internal to the cabin system  in the Boeing 777 cabin service system? (Level 2)",options:["The ARINC 629 bus","The CSS Intersystem Bus","The data transfer bus"],answer:1},
+{chapter:"ATA 44_FULL",q:"36. Which bus is a data interface specifically designed for use with inflight entertainment (IFE) systems in the Boeing 777 cabin service system? (Level 2)",options:["The ARINC 628 bus","The CSS Intersystem Bus","The ARINC 429 bus"],answer:0},
+{chapter:"ATA 44_FULL",q:"37. The cabin systems management unit (CSMU) is connected to (Level 2)",options:["The CSS Intersystem Bus","The aircraft's main ARINC 429 data bus.","The aircraft's main ARINC 629 data bus."],answer:2},
+{chapter:"ATA 44_FULL",q:"38. The cabin systems management unit (CSMU) connects to the IFE system through (Level 2)",options:["The ARINC 628 bus","The ARINC 429 bus","The aircraft's main ARINC 429 data bus."],answer:0},
+{chapter:"ATA 44_FULL",q:"39. Cabin attendant handsets (CAHs) are connected to (Level 3)",options:["The cabin systems management unit (CSMU)","The cabin systems control panel (CSCP)","The zone management unit (ZMU)"],answer:2},
+{chapter:"ATA 44_FULL",q:"40. Cabin Networks can transfer large volumes of data to many different locations by using (Level 3)",options:["Multiplexing and demultiplexing techniques","Modulation and demodulation techniques","Coding and decoding techniques"],answer:0},
+{chapter:"ATA 44_FULL",q:"41. Which PA announcements have higher priority? (Level 3)",options:["Cabin Crew PA announcements","Pilot's PA announcements ","Both Pilot's PA announcements and Cabin Crew PA announcements have same priority level"],answer:1},
+{chapter:"ATA 44_FULL",q:"42. The IFE equipment typically includes (Level 3)",options:["A video display, an audio headphone jack, and controls for selecting specific video or audio content to be enjoyed by the passenger","A video display and controls for selecting specific video or audio content to be enjoyed by the passenger","A controls for selecting specific video or audio content to be enjoyed by the passenger"],answer:0},
+{chapter:"ATA 44_FULL",q:"43. For connecting with the external networks, the aircraft uses (Level 3)",options:["A router that is connected to dedicated radio transmitting equipment.","A router that is connected to dedicated radio receiving equipment.","A router that is connected to dedicated radio transmitting and receiving equipment."],answer:2},
+{chapter:"ATA 44_FULL",q:"44. Which system can multiplex and de-multiplex many channels, and carry information to many destinations simultaneously? (Level 3)",options:["A low-speed digital data transfer system","A high-speed digital data transfer system","Both low and high-speed digital data transfer system"],answer:1},
+{chapter:"ATA 44_FULL",q:"45. The main advantage of the Iridium system is (Level 3)",options:["The world-wide coverage capability","It not have disruptive connections","More cheap"],answer:0},
+{chapter:"ATA 44_FULL",q:"46. The Advantages of using WI-FI inside an aircraft cabin in comparison to hard-wired aircraft systems are: (Level 3)",options:["Higher speed, easier and improved access to data and information and Hard points are eliminated (Ethernet) for connection to the internet.","Better accessibility throughout the aircraft cabin and information and Hard points are eliminated (Ethernet) for connection to the internet.","Higher speed, easier and improved access to data and information, Better accessibility throughout the aircraft cabin and Hard points are eliminated (Ethernet) for connection to the internet."],answer:2},
+{chapter:"ATA 44_FULL",q:"47. Which cameras essentially provide a real-time presentation of the aircraft's position for passengers? (Level 3)",options:["Outside video cameras","Inside video cameras","All cameras"],answer:0},
+{chapter:"ATA 44_FULL",q:"1. A cabin intercommunication data system is used by? (Level 1)",options:["Flight attendants, Pilots, and Passengers","Flight attendants, Pilots","Pilots, and Passengers"],answer:0},
+{chapter:"ATA 44_FULL",q:"2. What is the central processor of the cabin services system? (Level 1)",options:["ZMU","CSS","CSMU"],answer:2},
+{chapter:"ATA 44_FULL",q:"3. After the installation of a modern IFE system, the most important post installation test would be to ensure that? (Level 2)",options:["Complete isolation of the IFE system and integrity of other aircraft systems is maintained.","Complete isolation of the IFE system","Integrity of other aircraft systems is maintained"],answer:0},
+{chapter:"ATA 44_FULL",q:"4. Passenger Wi-Fi cabin network service, in comparison to hard wired data connections, have ______ data speed. (Level 2)",options:["Lower","The same","Higher."],answer:2},
+{chapter:"ATA 44_FULL",q:"5. Typical data speed for an aircraft Wi-Fi linked to a ground based system is _ Mbps. (Level 3)",options:["20","10","30"],answer:1},
+{chapter:"ATA 44_FULL",q:"6. Advantages of using WI-FI inside an aircraft cabin in comparison to hard-wired aircraft systems include: (Level 2)",options:["Higher speed, easier and improved access to data and information, Better accessibility throughout the aircraft cabin, Hard points are eliminated (Ethernet) for connection to the internet.","Higher speed, easier and improved access to data and information, Better accessibility throughout the aircraft cabin,","Better accessibility throughout the aircraft cabin, Hard points are eliminated (Ethernet) for connection to the internet."],answer:0},
+{chapter:"ATA 44_FULL",q:"7. In the 777 system, the main IFE computer is connected to the Cabin Services System via: (Level 3)",options:["An ARINC 628 data bus.","An ARINC 629 data bus.","An ARINC 429 data bus."],answer:0},
+{chapter:"ATA 46_FULL",q:"1. Traditionally, what are used for the storage medium? ",options:["Paper, Microfilm and microfiche","Paper, Microfilm","Microfilm and microfiche"],answer:0},
+{chapter:"ATA 46_FULL",q:"2. What is a disadvantage of microfilm and microfiche? ",options:["They have a low capacity","Special equipment was needed to magnify the images so that they could be viewed. The microfilm or microfiche was useless if the viewing equipment malfunctioned, or if it was not available when the information needed to be accessed","They have a slow access speed"],answer:1},
+{chapter:"ATA 46_FULL",q:"3. ROM is stand for? ",options:["Read over memory","Read only movement","Read only memory"],answer:2},
+{chapter:"ATA 46_FULL",q:"4. In old B777 aircraft, what are traditionally use by flight crew for accessing information? ",options:["Flight bag","EFB","Paper"],answer:0},
+{chapter:"ATA 46_FULL",q:"5. In modern B777 aircraft, what are use by flight crew for accessing information? ",options:["Flight bag","EFB","Paper"],answer:1},
+{chapter:"ATA 46_FULL",q:"6. TWLU stand for? ",options:["Terminal Wire LAN Unit","Term Wireless LAN Unit","Terminal Wireless LAN Unit"],answer:2},
+{chapter:"ATA 46_FULL",q:"7. LAN stand for? ",options:["Local area network","Local access network","Link area network"],answer:0},
+{chapter:"ATA 46_FULL",q:"8. CIU stand for? ",options:["Camera integrated unit","Camera interface unit","Cell interface unit"],answer:1},
+{chapter:"ATA 46_FULL",q:"9. What kind of technology is used by maintenance personnel? ",options:["DU","EFB","Maintenance Information Systems"],answer:2},
+{chapter:"ATA 46_FULL",q:"10. What statement is correct? ",options:["Flight crews need to access the EFB's information while in flight","Flight crews need to access the EFB's information while in on ground only","Flight crews do not need to access the EFB's information while in flight"],answer:0},
+{chapter:"ATA 46_FULL",q:"11. What statement is correct? ",options:["Maintenance personnel need to access different kinds of information while the aircraft is in flight.","Maintenance personnel need to access different kinds of information while the aircraft is on the ground.","Maintenance personnel need to access different kinds of information while the aircraft is on the ground and in flight"],answer:1},
+{chapter:"ATA 46_FULL",q:"12. What are advantages of using electronic format? ",options:["The space and weight saving","The ability to quickly locate the designed information","The space and weight saving, the ability to quickly locate the designed information"],answer:2},
+{chapter:"ATA 46_FULL",q:"13. Which system provide advantages to the cabin crew? ",options:["Passenger cabin information system","Flight deck information system","Maintenance information system"],answer:0},
+{chapter:"ATA 46_FULL",q:"14. AIMS stand for? ",options:["Airplane integrated management system","Airplane information management system","Airplane information moment system"],answer:1},
+{chapter:"ATA 46_FULL",q:"15. What advantage of modern computer? ",options:["It can store very large amounts of information","It can process very large amounts of information","It can store and process very large amounts of information"],answer:2},
+{chapter:"ATA 46_FULL",q:"16. What allows the 777 Electronic Flight Bag database to be wirelessly updated? ",options:["The TWLU contains a radio transmitter and receiver that creates a Local Area Net work (LAN) bet ween the airplane and a ground-based network","the aircraft's data loader","the FMS"],answer:0},
+{chapter:"ATA 46_FULL",q:"17. What information does MMR provide? ",options:["Aircraft altitude","Aircraft position","Aircraft attitude"],answer:1},
+{chapter:"ATA 46_FULL",q:"18. What are databases accessible through the EFB? ",options:["Aeronautical charts, airport maps and charts  with real-time position monitoring, manuals","Manuals, minimum  equipment lists, and logbooks","Aeronautical charts, airport maps and charts  with real-time position monitoring, manuals, minimum equipment lists, and logbooks"],answer:2},
+{chapter:"ATA 46_FULL",q:"19. What statement is correct? ",options:["Information system furnish a means of storing, updating and retrieving digital information","Information system furnish a means of storing, updating digital information","Information system furnish a means of storing, retrieving digital information"],answer:0},
+{chapter:"ATA 46_FULL",q:"20. DU stand for? ",options:["Drive unit","Display unit","Domain unit"],answer:1},
+{chapter:"ATA 46_FULL",q:"21. MMR stand for ",options:["Multi-mode Replaceable","Maintenance mode receiver","Multi-mode receiver"],answer:2},
+{chapter:"ATA 46_FULL",q:"22. What information does The flight attendant's manual contains for cabin crew members? ",options:["Check lists, procedures, secuity information, and information about safety devices and systems on the aircraft","Check lists, procedures, secuity information","Information about safety devices and systems on the aircraft"],answer:0},
+{chapter:"ATA 46_FULL",q:"23. What statement is correct? ",options:["Smartphones are very well suited for storing and retrieving maintenance information in the aviation maintenance environment","Laptop computers are very well suited for storing and retrieving maintenance information in the aviation maintenance environment","EFBs are very well suited for storing and retrieving maintenance information in the aviation maintenance environment"],answer:1},
+{chapter:"ATA 46_FULL",q:"24. What data does the EFB system receives from? ",options:["AIMS only","MMRs only","AIMS and MMRs"],answer:2},
+{chapter:"ATA 46_FULL",q:"25. What is the purpose of an electronic flight bag? ",options:["Electronic information storage system for pilots","EFB to access information that would traditionally have been found in various printed publications and carried aboard in a flight bag.","replacing traditional printed navigation charts"],answer:1},
+{chapter:"ATA 46_FULL",q:"26. Examples are aircraft general information systems  include: flight deck information systems, maintenance  information systems, and__________________information systems. ",options:["passenger cabin","Cockpit","Maintenance"],answer:0},
+{chapter:"ATA 46_FULL",q:"27. An electronic flight bag (EFB) is part of the__________________information system ",options:["Maintenance","flight deck","Passenger"],answer:1},
+{chapter:"ATA 46_FULL",q:"28. On a 777 equipped with the EFB, the system displays  information on __________________ that are installed  on the flight deck. ",options:["MMR","LAN","the two Display Units (DUs)."],answer:2},
+{chapter:"ATA 46_FULL",q:"29. Maintenance crews use maintenance manuals,  illustrated parts catalogs, wiring diagram manuals,  service bulletins, and other technical data stored in the  __________________. ",options:["Maintenance information system.","Passenger information system","Flight information system"],answer:0},
+{chapter:"ATA 46_FULL",q:"30. A __________________ computer can be used to access  electronically stored maintenance information of the  aircraft. ",options:["Ipad","laptop","Smartphone"],answer:1},
+{chapter:"ATA 46_FULL",q:"31. What digital electronics do allows flight attendants to access information? ",options:["smartphone","laptop","a computer tablet that contains the manual."],answer:2},
+{chapter:"ATA 46_FULL",q:"32. What purpose of update the information for miscellaneous information system? ",options:["to ensure that the most  up-to-date version is being used","to comply with recommend from manufactures","to comply with maintenance procedures from the operator"],answer:0},
+{chapter:"ATA 46_FULL",q:"33. Reduced weight, reduced bulk and ease of updating are  advantages of electronic aircraft __________________  systems. ",options:["integrated","information.","cockpit"],answer:1},
+{chapter:"ATA 46_FULL",q:"34. How to update the 777 Electronic Flight Bag's databases ",options:["they can be updated through the aircraft's data loader","they can be updated through the aircraft's data loader, but they can also be updated wirelessly","they can be updated wirelessly"],answer:1},
+{chapter:"ATA 46_FULL",q:"35. What statement is correct? ",options:["The TWLU contains a radio transmitter only","The TWLU contains LAN only","The TWLU contains a radio transmitter and receiver  that creates a Local Area Net work (LAN) bet ween  the airplane and a ground-based network"],answer:2},
+{chapter:"ATA 46_FULL",q:"36. Instead of maps and charts, maintenance crews use ",options:["Maintenance manuals, wiring diagrams, parts catalogs, Airworthiness directions","Structure repair manuals, wiring diagrams, parts catalogs, service bulletins","Maintenance manuals, illustrated parts catalogs, wiring diagram manuals, service bulletins, and other technical data."],answer:2},
+{chapter:"ATA 46_FULL",q:"37. The three domains in the Network Server System are known as: ",options:["Avionics domain; Flight operations; Communications domain","Avionics domain; Flight operations; Communications and cabin domain","Avionics domain; Cabin operations; Communications and cabin domain"],answer:1},
+{chapter:"ATA 46_FULL",q:"38. In the 777 system, How to the EUs send information to the DUs ",options:["Thourgh fiber-optic cables","Thourgh aluminum wiring","Thourgh copper wiring"],answer:0},
+{chapter:"ATA 46_FULL",q:"39. What statement is correct? ",options:["The information displayed on the DCDU provided to the flight crew from the ATC ground centres","The information displayed on the DCDU provided to the flight crew from the VOR ground centres","The information displayed on the DCDU provided to the flight crew from the ATC ground centres and enables the crew to send responses to ATC messages received"],answer:2},
+{chapter:"ATA 46_FULL",q:"40. The flight operations domain consists of: ",options:["a server and router","a server and terminals in the flight deck","a server, router and terminals in the flight deck"],answer:2},
+{chapter:"ATA 46_FULL",q:"41. What statement is correct? ",options:["ATIMS provides a means for a swift transfer of data via datalink between airplane and ground stations","ATIMS provides a means for a swift transfer of data via datalink between airplanes only","ATIMS provides a means for a swift transfer of data via datalink between ground stations"],answer:0},
+{chapter:"ATA 46_FULL",q:"42. The software loaded into the ATSU includes ? ",options:["ATSU Airplane Interface software, ATSU configuration software","ATSU Airplane Interface software, ATSU configuration software, ATSU router software, Airline Operation Control software, Airline Operation Control databases, ATC FANS A+ applications.","ATSU Airplane Interface software, ATSU configuration software, ATSU router software, Airline Operation Control software"],answer:1},
+{chapter:"ATA 46_FULL",q:"1. What is the purpose of an electronic flight bag? (Level 1)",options:["To access information that would traditionally have been found in various printed publications and carried aboard in a flight bag.","To connect to DUs","To connect to Eus"],answer:0},
+{chapter:"ATA 46_FULL",q:"2. The two areas of the Network Server System are known as _________and_________ (Level 2)",options:["On-board Information System and Open World","Avionics World ; Open World","On-board Information System and Avionics world"],answer:1},
+{chapter:"ATA 46_FULL",q:"3. The three domains in the Network Server System are known as _________, ________ and ______________ (Level 3)",options:["Avionics domain; Flight operations; Cabin domain","Avionics domain; Flight operations; Communications","Avionics domain; Flight operations; Communications and cabin domain"],answer:2},
+{chapter:"ATA 46_FULL",q:"4. The primary purpose of securing information in the Avionics World section of the OnBoard Information System is what? (Level 2)",options:["To protect critical navigation data from corrupting malware or viruses.","To protect critical navigation data from corrupting malware","To protect critical navigation data from viruses."],answer:0},
+{chapter:"ATA 46_FULL",q:"5. State four examples of information which might be stored in an on-board Maintenance Information System? (Level 2)",options:["Maintenance manuals, wiring diagrams, parts catalogs, Airworthiness Direction","CMM, wiring diagrams, parts catalogs, Airworthiness Direction","Maintenance manuals, wiring diagrams, parts catalogs, service bulletins."],answer:2},
+{chapter:"ATA 46_FULL",q:"6. What signal alerts the flight crew of a high priority message from air traffic control? (Level 1)",options:["A Single chime","A repetitive audible chime generated by the flight warning computer.","A Single tone"],answer:1},
+{chapter:"ATA 46_FULL",q:"7. What software system generates and transmits a request for an in-flight oceanic clearance? (Level 3)",options:["Air traffic control FANS A+ software via a multipurpose disk drive.","ATSU router software","Airline Operation Control software"],answer:0}
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer)
+        label.classList.add("wrong");
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length}`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer)
+      label.classList.add("wrong");
+  });
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const countInput = document.getElementById("questionCount");
+  let count = parseInt(countInput.value);
+
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  pool = JSON.parse(JSON.stringify(pool));
+
+  if (shuffleEnabled) shuffleArray(pool);
+
+  questions = pool.slice(0, count);
+
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const count = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("questionCount").value = count;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+}
+
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
