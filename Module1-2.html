@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 1,2 - Offline Quiz - 2601</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz</h2>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="updateChapterSize()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All questions</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+</div>
+
+
+<div id="quiz"></div>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapter:"Module 1",q:"What does LCM stand for?",level:1,options:["Lowest common multiple.","Latest common multiple.","Lower common multiple."],answer:0},
+{chapter:"Module 1",q:"What is the order in which calculations are carried out?",level:1,options:["Bracket, Power and Root, Multiplication and Division, Addition and Subtraction.","Bracket, Multiplication and Division, Power and Root,  Addition and Subtraction.","Bracket, Multiplication and Division, Addition and Subtraction, Power and Root."],answer:0},
+{chapter:"Module 1",q:"What is the first step of addition and subtraction of fractions?",level:1,options:["Finding the common denominator.","Finding the common numerator.","Finding the average of all denominator."],answer:0},
+{chapter:"Module 1",q:"Which way is used to express a ratio?",level:1,options:["A fraction, two number with a separater of a colon, two number with a separater of the word 'to'.","A fraction, two number with a separater of minus mark, two number with a separater of the word 'to'.","A fraction, two number with a separater of percent mark, two number with a separater of the word 'to'."],answer:0},
+{chapter:"Module 1",q:"How is average of a list of values found?",level:1,options:["Add together all of the values in the list and divide number of values in the list.","Add maximum value and minimize value and divide the number of values in the list.","Subtract minimize value from maximum value and and divide number of values in the list."],answer:0},
+{chapter:"Module 1",q:"One part out of four is equal.",level:1,options:["25 percent.","10 percent.","40 percent."],answer:0},
+{chapter:"Module 1",q:"Seven to the second power is referred as",level:1,options:["Seven squared.","Seven cubed.","2 to the power of 7"],answer:0},
+{chapter:"Module 1",q:"What is perfect squares?",level:1,options:["Numbers whose square roots are whole numbers.","Numbers whose square roots are prime numbers.","Numbers whose square roots are fractions."],answer:0},
+{chapter:"Module 1",q:"What is purpose of scientific notation?",level:1,options:["Express very large or very small numbers.","Express perfect square.","Express prime number."],answer:0},
+{chapter:"Module 1",q:"What is denominated numbers?",level:1,options:["Numbers that have a unit of measure associated with them","The top number of a fraction.","The bottom number of a fraction."],answer:0},
+{chapter:"Module 1",q:"Which of the following statement is correct?",level:1,options:["The sum of two positive numbers is positive","The sum of two negative numbers is positive","The multiplication of a positive and a negative number is zero"],answer:0},
+{chapter:"Module 1",q:"When adding and subtracting fractions, what should be use to simplify the result?",level:1,options:["Least common denominator (LCD)","Greatest common factor (GCF)","Prime factorization"],answer:0},
+{chapter:"Module 1",q:"What is the definition of volume?",level:1,options:["The amount of space within an object","The surface area of an object","The heaviness of an object"],answer:0},
+{chapter:"Module 1",q:"Which of the following statement is correct?",level:1,options:["Multiplication is the process of repeated addition","Multiplication is the process of repeated subtraction","Multiplication is the process of repeated division"],answer:0},
+{chapter:"Module 1",q:"Which following one is correct?",level:1,options:["Algebra extends the concepts of arithmetic.","Arithmetic extends the concepts of algebra.","Algebra extends the concepts of geometry."],answer:0},
+{chapter:"Module 1",q:"What does Algebra use to represent numbers and show relationships between them?",level:1,options:["Letters or symbols.","Graphs.","Charts."],answer:0},
+{chapter:"Module 1",q:"What is the coefficient?",level:1,options:["A number appears in front of a letter or variable.","A number appears on its own in algebra.","A value or number that is not yet known."],answer:0},
+{chapter:"Module 1",q:"When adding algebraic terms:",level:1,options:["You only combine like terms.","You can always combine all terms.","You can always combine consecutive terms."],answer:0},
+{chapter:"Module 1",q:"What happen if whatever is done on one side of an equation, also be done on the other side of the equation.",level:1,options:["Relationship between terms on each side of the '=' sign always remains the same.","Relationship between terms on each side of the '=' sign always change.","Relationship between terms on each side of the '=' sign can change."],answer:0},
+{chapter:"Module 1",q:"The rules for manipulating simple algebraic fractions are the same as ",level:1,options:["The rules for manipulating numeric fractions.","The rules for manipulating numeric fractions except for division.","The rules for manipulating numeric fractions except for order of operations."],answer:0},
+{chapter:"Module 1",q:"Expand 5(y + 4) ",level:1,options:["5y + 20.","5y + 4.","5y + 54."],answer:0},
+{chapter:"Module 1",q:"Expand (y + 3) (y - 4)",level:1,options:["y2-y-12.","4y - 4.","y2- 12."],answer:0},
+{chapter:"Module 1",q:"Which property of addition is described by the following sentence 'the order in which terms are added does not change the sum'?",level:1,options:["Commutative","Distributive ","Associative"],answer:0},
+{chapter:"Module 1",q:"Which of the following is correct about the distributive property of multiplication of algebraic expression?",level:1,options:["a x ( b + c ) = a x b + a x c ","a x ( b + c ) = a x b + c","a x ( b + c ) = a + b x c"],answer:0},
+{chapter:"Module 1",q:"If the left side of an equation is divided by a number, what must happen to the right side?",level:1,options:["Divided by the same number.","Multiplied by the same number.","Added by the same number."],answer:0},
+{chapter:"Module 1",q:"What is the correct step when dividing algebraic fractions?",level:1,options:["Invert the second fraction and multiply","Multiply both fractions directly","Add the numerators and multiply the denominators"],answer:0},
+{chapter:"Module 1",q:"Which one is the most effective method for presenting relationship between two or more quantities??",level:1,options:["Graphs and charts. ","Written descriptions. ","Tables. "],answer:0},
+{chapter:"Module 1",q:"What does interpretation of two variables graph mean?",level:1,options:["Determining unknown variable when a variable is known.","Constructing the relationship between two variables.","Determining unknown variable when a variable is zero."],answer:0},
+{chapter:"Module 1",q:"How many axes does a Cartesian coordinate system have? ",level:1,options:["2","3","4"],answer:0},
+{chapter:"Module 1",q:"y is a function of x. It means: ",level:1,options:["There is an equation that links x and y.","If x increase y will increase. ","If x increase y will decrease."],answer:0},
+{chapter:"Module 1",q:"What is the general form of a linear function? ",level:1,options:["y = mx + c. ","y = mx2 + c. ","y = mx + c."],answer:0},
+{chapter:"Module 1",q:"What is the general form of a quadratic function?  ",level:1,options:["y = ax2 +bx+c.","y = mx2 + c. ","ax2 +by2=c. "],answer:0},
+{chapter:"Module 1",q:"Given a point on the rectangular coordinate system that is presented as (x, y). If product x and y is greater zero, the point locate in:",level:2,options:["First and Third quadrant.","First and Second quadrant.","First quadrant."],answer:0},
+{chapter:"Module 1",q:"Which point is used to plot graph of the function y = 3x +4",level:2,options:["(1, 7).","(-1, -7).","(0, 0)."],answer:0},
+{chapter:"Module 1",q:"How many times does the graph of y= ax + b cross graph of y= (a + 1)x + c ",level:2,options:["1","0","2"],answer:0},
+{chapter:"Module 1",q:"The line with equation x = 3 is.  ",level:2,options:["Parallel to the y axis. ","At 45 degree to both axes. ","Parallel to the x axis. "],answer:0},
+{chapter:"Module 1",q:"A straight line graph has the equation 3y = 12x – 3. What is the gradient?",level:2,options:["4","1/4.","1/12."],answer:0},
+{chapter:"Module 1",q:"What is the gradient of graph of a linear function that parallel to x-axis",level:2,options:["0","1","-1"],answer:0},
+{chapter:"Module 1",q:"The graph of a linear function have two points (9, 3) and (3, 1). What is the slope?",level:2,options:["1/3.","1/4.","1/5."],answer:0},
+{chapter:"Module 1",q:"Two graphs with equations y = 3x - 6 and 2y = 6x + 4.",level:2,options:["Are parallel.","Are at right angles.","Meet when y = 3."],answer:0},
+{chapter:"Module 1",q:" Graph of a linear function parallel to x-axis and have a y-axis intercept of 2. What is this function?",level:2,options:["y = 2.","y = 2x.","y = x + 2."],answer:0},
+{chapter:"Module 1",q:"How many times does the x-axis get crossed when y = x2 -3",level:2,options:["2","1","3"],answer:0},
+{chapter:"Module 1",q:"Which quadratic function have a minimum point?  ",level:2,options:["y = x2 + 2x + 7.","y = -x2 + 2x + 7. ","y = -x2 + 7. "],answer:0},
+{chapter:"Module 1",q:"How many times does a graph of quadratic function cross x-axis?",level:2,options:["Not more than 2.","Always 2.","Not less than 1."],answer:0},
+{chapter:"Module 1",q:"How many times does a graph of quadratic function cross y-axis?",level:2,options:["Always 1.","Always 2. ","1 or 2. "],answer:0},
+{chapter:"Module 1",q:"Give the graph of quadratic function y = ax2 + bx + c. Vertical axis become axis of symmetry of this graph if and only if",level:2,options:["b = 0.","c = 0.","b = a."],answer:0},
+{chapter:"Module 2",q:"The smallest part of matter is:",level:1,options:["An atom","A compound","A molecule"],answer:0},
+{chapter:"Module 2",q:"The number of electrons and neutrons in each atom:",level:1,options:["The same","The number of electrons less than neutrons ","The number of electrons more than neutrons "],answer:0},
+{chapter:"Module 2",q:"What do you get when you add H2 and O2",level:1,options:["H2O","H2O2","HO"],answer:0},
+{chapter:"Module 2",q:"Which is correct statement?",level:1,options:["Atoms of the same or different elements may chemically bond to form a molecule","Only atoms of the different elements may chemically bond to form a molecule","Only atoms of the same element  may chemically bond to form a molecule"],answer:0},
+{chapter:"Module 2",q:"The second shell of the atom has",level:1,options:["maximum 8 electrons","maximum 2 electrons","maximum 18 electrons"],answer:0},
+{chapter:"Module 2",q:"The charge on a proton is: ",level:1,options:["Positive","Neutral ","Negative"],answer:0},
+{chapter:"Module 2",q:"What is compounds?",level:1,options:["Material made up of two or more elements that have chemically bonded ","Material made up of two or more elements that is physically mixed together ","Material made up of two or more elements that have chemically bonded and can be by mechanical means."],answer:0},
+{chapter:"Module 2",q:"What is liquid matter?",level:1,options:["Is characterized by molecules that have more energy and increased movement","When pressure is applied, the molecules can be made to exist closer to each other","Do not contain enough movement of the molecules to permit a physical change of shape"],answer:0},
+{chapter:"Module 2",q:"What is correct statement?",level:1,options:["When pressure on a liquid is increased, its boiling point increases","When pressure on a liquid is increased, its boiling point decreases","The vapor pressure of any substance varies opposite with temperature"],answer:0},
+{chapter:"Module 2",q:"What is gas characteristic?",level:1,options:["Compressible","Imcompressible","The molecules of gas are tightly bound to each other"],answer:0},
+{chapter:"Module 2",q:"What causes a substance to change between solid, liquid, and gas states without changing its chemical composition?",level:1,options:["The addition or removal of energy","A change in molecular structure","A change in the number of protons in the atom"],answer:0},
+{chapter:"Module 2",q:"What is plasma?",level:1,options:["A state of matter made of ionized gas with positive ions and free electrons","Plasma is a cold gas formed when molecules slow down to near absolute zero","Plasma is a neutral gas made  of tightly packed atoms with no free electrons"],answer:0},
+{chapter:"Module 2",q:"It is the influence tending to change the motion of a body or produce stress in a stationary body?",level:1,options:["Force","Stress","Monent"],answer:0},
+{chapter:"Module 2",q:"What is unit of the moment of force?",level:1,options:["Pound-inches","Kilogam-metre","Newton-inches"],answer:0},
+{chapter:"Module 2",q:"The effect of force acting on a stationary body or structure is called?",level:1,options:["Stress","Strain","Power"],answer:0},
+{chapter:"Module 2",q:"Two couples with magnitude F act against each other. The resultant will be",level:1,options:["0","2F","-2F"],answer:0},
+{chapter:"Module 2",q:"What is ratio that called the gravitational field strength?",level:1,options:["Weight/mass","Force/mass","Weight/force"],answer:0},
+{chapter:"Module 2",q:"The pull of gravity on a mass is called:",level:1,options:["Weight","Lift","Tension"],answer:0},
+{chapter:"Module 2",q:"What is the stress that resists twisting ?",level:1,options:["Torsion","Compression","Shear"],answer:0},
+{chapter:"Module 2",q:"What is the stress that resists a crushing force ?",level:1,options:["Compression","Tension","Shear"],answer:0},
+{chapter:"Module 2",q:"What is correct statement for atmospheric pressure?",level:1,options:["Pressure decreases with increased altitude","Pressure increases with increased altitude","Atmospheric pressure does not change at any altitude "],answer:0},
+{chapter:"Module 2",q:"What is the standard pressure at sea level? ",level:1,options:["29.92 inHg","20.58 inHg","10.1 inHg"],answer:0},
+{chapter:"Module 2",q:"What is factor the moment of force depend on?",level:2,options:["Magnitude of the force","Time of the force apply","The rotation direction of the  force"],answer:0},
+{chapter:"Module 2",q:"A wrench is used to tighten a bolt. If a force of 50 N is applied perpendicular to the wrench at a distance of 0.3 meters from the bolt, what is the moment of force acting on the bolt?",level:2,options:["15Nm","20Nm","25Nm"],answer:0},
+{chapter:"Module 2",q:"A force 10 n is placed 2 meters from a pivot point, what is the moment?",level:2,options:["20Nm","25Nm","3Nm"],answer:0},
+{chapter:"Module 2",q:"Calculate the tensile strength of a material has a circular cross-sectional area of 20 square inches and breaks under a force of 10,000 pounds",level:2,options:["500 psi","200,000 psi","5,000 psi"],answer:0},
+{chapter:"Module 2",q:"When a fluid is in motion, and its velocity is converted to pressure, that pressure is known as ",level:2,options:["Ram pressure ","Static pressure","Total pressure"],answer:0},
+{chapter:"Module 2",q:"An object is placed in fluid, if upward force of the fluid is greater than the weight of the object, this object will:",level:2,options:["Float","Sink","50% submerged"],answer:0},
+{chapter:"Module 2",q:"A 10-ft³ object weighing 700 lbs. is placed in pure water(density of pure water is 62.4 lbs), the object will",level:2,options:["sink","Float","10% submerged"],answer:0},
+{chapter:"Module 2",q:"A 10-ft³ object weighing 700 lbs. is placed in pure water(density of pure water is 62.4 lbs), The difference between the buoyant force and the object's weight will be ",level:2,options:["76 lbs","70 lbs","537.6 lbs"],answer:0},
+{chapter:"Module 2",q:"If the distance is measured in miles and the time in hours, the units of speed will be ",level:1,options:["Miles per hour ","Miles hour ","Hour per miles "],answer:0},
+{chapter:"Module 2",q:"What is SI unit of acceleration?",level:1,options:["Metre per second per second ","metre per second  ","Metre  second squared?  "],answer:0},
+{chapter:"Module 2",q:"What is correct statement for first law of Newton,s law?",level:1,options:["Objects at rest tend to remain at rest and objects in motion tend to remain in motion at the same speed and in the same direction, unless acted on by an external force","When a force acts upon a body, the momentum of that body is changed. The rate of change of momentum is proportional to the applied force","if a force is applied to an object, the object will supply a resistive force exactly equal to and in the opposite direction of the force applied"],answer:0},
+{chapter:"Module 2",q:"The force that acts on a body to cause it to rotate in the circular path is called:",level:1,options:["Centripetal force","Centrifugal force","Inertia force"],answer:0},
+{chapter:"Module 2",q:"Which of the following statement describes centrifugal force?",level:1,options:["Equal to centripetal force and acts in the opposite direction","Greater to centripetal force and acts in the opposite direction","Smaller to centripetal force and acts in the opposite direction"],answer:0},
+{chapter:"Module 2",q:"The period of simple pendulum is:",level:2,options:["Independent of its mass","Independent on the length of the suspending rod ","Dependent of its mass"],answer:0},
+{chapter:"Module 2",q:"Which is correct statement for the speed?",level:2,options:["The speed of an object tells nothing about the direction an object is moving","Speed can be defined as the rate of motion in a particular direction","Speed is described as being a vector quantity"],answer:0},
+{chapter:"Module 2",q:"When an airplane is brought to a sudden halt and the passengers are thrown forward in their seats. The motion of passengers is described by ",level:2,options:["Newton’s first law of motion","Newton’s second law of motion","Newton’s third law of motion"],answer:0},
+{chapter:"Module 2",q:"What factor is acceleration of a body depend on?",level:2,options:["Mass of body","Time of force apply to body","Point of body that force apply to"],answer:0},
+{chapter:"Module 2",q:"What would the centripetal force be if a 10-pound weight was moving in a 3ft radius circular path at a velocity of 500 fps? ",level:2,options:["25,880 lb","15,000 lb","16,666 lb"],answer:0},
+{chapter:"Module 2",q:"The distance from the center of the wheel to the handles on a wheelbarrow is 60 inches. The weight in the bucket is 18 inches from the center of the wheel. If 300 lbs. is placed in the bucket, how much force must be applied at the handles to lift the wheelbarrow? ",level:2,options:["90 lb","1000 lb","324000 lb"],answer:0},
+{chapter:"Module 2",q:"How is the mechanical advantage when a first-class lever has equal arms? ",level:2,options:["1","0.5","2"],answer:0},
+{chapter:"Module 2",q:"When a single fixed pulley has equal arms:",level:2,options:["The force of the pull on the rope must be equal to the weight of the object being lifted","The force of the pull on the rope must be greater to the weight of the object being lifted","The force of the pull on the rope must be smaller to the weight of the object being lifted"],answer:0},
+{chapter:"Module 2",q:"How is the mechanical advantage when a single pulley has equal arms? ",level:2,options:["2","1","3"],answer:0},
+{chapter:"Module 2",q:"If someone pulled in 4 ft of the effort rope, the weight would only rise off the floor 2 ft. If the weight was 100 lb, the effort applied would only need to be ",level:2,options:["50 lb","100 lb","150 lb"],answer:0},
+{chapter:"Module 2",q:"The block and tackle are made up of four pulleys, the top two being fixed and the bottom two being movable, If the weight was 200 lbs., it would require a effort to lift it is: ",level:2,options:["50 lb.","800 lb","200 lb"],answer:0},
+{chapter:"Module 2",q:"the two gears turn in opposite directions. The gear is 9 inches in diameter and has 45 teeth, and theother gear is 12 inches in diameter and has 60 teeth. The mechanical advantage would be: ",level:2,options:["0.75","0.15","0.2"],answer:0},
+{chapter:"Module 2",q:"What is main purpse of the bevel gear?",level:2,options:["Is used to change the plane of rotation","Is used to change the speed of rotation","Is used to change the ratio of transmition"],answer:0},
+{chapter:"Module 2",q:"A pinion gear with 10 teeth is driving a spur gear with 40 teeth. The spur gear is rotating at 160 rpm. Determine the speed of the pinion gear.",level:2,options:["640 rpm","400 rpm","6400 rpm"],answer:0},
+{chapter:"Module 2",q:"What is the ratio of cruising speed to maximum speed? If the cruising speed of an airplane is 200 knots and its maximum speed is 463 km/h",level:2,options:["4:5","2:4.63","200:463"],answer:0},
+{chapter:"Module 2",q:"What power would be needed to raise the GE-90 turbofan engine into position to install it on a Boeing 777-300 airplane? The engine weighs 19 000 lbs and it must be lifted 4 ft in 2 minutes.",level:2,options:["38 000 ft-lb/min","33 000 ft-lb/min","11 500 ft-lb/min"],answer:0},
+{chapter:"Module 2",q:"A Boeing 747 weighing 450,000 pounds needs to be raised 4 feet in the air so maintenance can be done on the landing gear. How much potential energy does the airplane possess because of this raised position?",level:2,options:["1,800,000 ft-lb ","112,500 ft/lb ","180,000 ft-lb "],answer:0},
+{chapter:"Module 2",q:"A Boeing 777 weighing 600,000 lbs. is moving down the runway on its takeoff roll with a velocity of 200 fps. How many foot-pounds of kinetic energy does the airplane possess? ",level:2,options:["372,670,000 ft-lb","120,000,000 ft-lb","240,000,000 ft-lb"],answer:0},
+{chapter:"Module 2",q:"What is mass?",level:1,options:["The amount of matter in an object","The force of gravity acting on an object's mass","The amount of atom in an object"],answer:0},
+{chapter:"Module 2",q:"What is weight?",level:1,options:["The force of gravity acting on an object's mass","The amount of matter in an object","The amount of atom in an object"],answer:0},
+{chapter:"Module 2",q:"What is force?",level:1,options:["The intensity of a push or pull on an object","The energy stored in an object","The internal energy reactivity of a substance"],answer:0},
+{chapter:"Module 2",q:"The unit for force in the English system is: ",level:1,options:["pounds","newtons","kilogam"],answer:0},
+{chapter:"Module 2",q:"What is inertia?",level:1,options:["The resistance of an object to a change in its motion","The force that makes an object move faster","The energy stored in a moving object"],answer:0},
+{chapter:"Module 2",q:"When is work done in the mechanical sense?",level:1,options:["When a force moves an object through a distance","When a force is applied, even if nothing moves","Whena force is applied to move object"],answer:0},
+{chapter:"Module 2",q:"What is potential energy?",level:1,options:["Energy that is stored or at rest","Energy in motion","Energy lost during motion"],answer:0},
+{chapter:"Module 2",q:"What is the momentum of a ball of mass 2 grams and has a velocity of 10cm/s?",level:2,options:["0.0002 kg.m/s","5 kg.m/s","20 kg.m/s"],answer:0},
+{chapter:"Module 2",q:"What is factor the gyroscopic rigidity depends upon? ",level:2,options:["Weight","Diameter of rotor","Diameter of bearing"],answer:0},
+{chapter:"Module 2",q:"How many kinds of friction are there?",level:2,options:["3","2","4"],answer:0},
+{chapter:"Module 2",q:"What type of friction requires the greatest force to overcome it?",level:2,options:["Static friction","Dynamic friction","Rolling friction"],answer:0},
+{chapter:"Module 2",q:"What force must be exerted by the towing vehicle to keep the airplane with a gross weight of 79,600 lbs rolling after once set in motion over a concrete ramp? (the coefficient of rolling friction is 0.02 mu)",level:2,options:["1,592 lb","3,980 lb","39,800 lb"],answer:0},
+{chapter:"Module 2",q:"What is the coefficient of static friction? ",level:2,options:["The coefficient of static friction is the friction force between two objects when neither of the objects is moving","The coefficient of static friction is the force between two objects when one object is moving","The coefficient of static friction is the force between two objects if both objects are moving against one another"],answer:0},
+{chapter:"Module 2",q:"What does Newton’s Third Law state?",level:1,options:["For every action, there is an equal and opposite reaction","Force equals mass times velocity","Heavy objects fall faster than light ones"],answer:0},
+{chapter:"Module 2",q:"What does the momentum conservation principle state?",level:1,options:["The total momentum of two interacting objects stays the same","A stationary object has more momentum than a moving one","Momentum is created when two objects touch"],answer:0},
+{chapter:"Module 2",q:"What does force × time represent in physics?",level:1,options:["Impulse","Work","Acceleration"],answer:0},
+{chapter:"Module 2",q:"How many kinds of the friction are there?",level:1,options:["3","4","5"],answer:0},
+{chapter:"Module 2",q:"What does the coefficient of friction represent?",level:1,options:["The relationship between frictional force and normal force","The speed of an object sliding on a surface","The relationship between sliding friction and static friction"],answer:0},
+{chapter:"Module 2",q:"The force of friction for objects mounted on wheels or rollers is called",level:1,options:["Rolling friction","Sliding friction ","Static friction"],answer:0},
+{chapter:"Module 2",q:"The liquid which fills a certain container weighs 1,497.6 lb. The container is 4 ft long, 3 ft wide, and 2 ft deep. Density of fluid is",level:2,options:["62.4 lb./ft³","124.8 lb./ft³","249.6 lb./ft³"],answer:0},
+{chapter:"Module 2",q:"How is relationship between the density of a gas and the pressure exerted on it?",level:2,options:["The density of a gas increases in direct proportion to the pressure exerted on it","The density of a gas increases in reverse proportion to the pressure exerted on it","The density of a gas dose not depend on the pressure exerted on it"],answer:0},
+{chapter:"Module 2",q:"A liquid fills a container that is 4 feet long, 3 feet wide, and 2 feet deep. The liquid weighs 1,497.6 pounds. What is the density of the liquid in g/cm³?",level:2,options:["1.0 g/cm³","6.2 g/cm³","1.2 g/cm³"],answer:0},
+{chapter:"Module 2",q:"Why is pressure especially important when calculating the density of a gas?",level:2,options:["Because the density of a gas increases directly with the pressure applied to it","Because gas density remains constant regardless of conditions","Because the density of a gas decreases directly with the pressure applied to it"],answer:0},
+{chapter:"Module 2",q:"According to Bernoulli’s Principle, what happens to dynamic pressure when static pressure decreases in a moving airflow?",level:2,options:["Dynamic pressure increases","Dynamic pressure stays the same","Dynamic pressure also decreases"],answer:0},
+{chapter:"Module 2",q:"What is the viscosity index?",level:2,options:["Is a number that indicates how much a fluid's viscosity changes with temperature","Is number that the pressure at which a fluid begins to boil","Is number that the pressure at which a fluid begins to freezing"],answer:0},
+{chapter:"Module 2",q:"What is the density of a substance?",level:1,options:["Its weight per unit volume","Its mass multiplied by gravity","Its volume divided by area"],answer:0},
+{chapter:"Module 2",q:"What is the unit of volume used in the Imperial system of measurement?",level:1,options:["1 cubic foot (ft³)","1 cubic centimeter (cm³)","1 gallon (gal)"],answer:0},
+{chapter:"Module 2",q:"Which units can be used to express density?",level:1,options:["Pounds per cubic foot ","Pounds per square inch","Grams per square inch"],answer:0},
+{chapter:"Module 2",q:"What is the standard substance used to compare the density of liquids and solids?",level:1,options:["Water","Mercury","Hydrogen"],answer:0},
+{chapter:"Module 2",q:"What is viscosity?",level:1,options:["The internal resistance of a fluid to flow","The ability of a fluid to evaporate","The external resistance of a fluid to flow"],answer:0},
+{chapter:"Module 2",q:"Which type of substance is generally considered incompressible?",level:1,options:["Liquid","Gas","Vapor"],answer:0},
+{chapter:"Module 2",q:"Covert   32 oF to oC",level:1,options:["0 oC ","-10oC ","273 oC "],answer:0},
+{chapter:"Module 2",q:"What happen when a gas is heated?",level:1,options:["The gas is expanded","The molecules of gas move slower","The molecules of gas move more close together"],answer:0},
+{chapter:"Module 2",q:"What is BTU defined?",level:1,options:["As the amount of heat required to change the temperature of 1 lb. of water 1 degree Fahrenheit (1°F)","As the amount of heat required to change the temperature of 1 lb. of water 1 degree Celsius (1°C)","As the amount of heat required to change the temperature of 1 lb. of water 1/10 degree Celsius (1°C)"],answer:0},
+{chapter:"Module 2",q:"1 dergee rise on the centigrade scale will cause ",level:2,options:["1.8 degree rise in Fahrenheit","33 degree rise in Fahrenheit","0.91 degree rise in Fahrenheit"],answer:0},
+{chapter:"Module 2",q:"What is relationships between Degrees Rankine and Degrees Celsius?",level:2,options:["Degrees Rankine = (1.8 × Degrees Celsius) + 492","Degrees Rankine = (1.8 × Degrees Celsius) + 460","Degrees Rankine = (1.8 × Degrees Celsius) + 32"],answer:0},
+{chapter:"Module 2",q:"When a liquid is heated, it expands",level:2,options:["More than a solid","Less than a solid","More than a gass"],answer:0},
+{chapter:"Module 2",q:"Coefficient of expansion of Copper",level:2,options:["More than Coefficient of expansion of Brick","More than Coefficient of expansion of Aluminum","More than Coefficient of expansion of Ice"],answer:0},
+{chapter:"Module 2",q:"What is unit used in the measurement of the heat energy in foods?",level:2,options:["Calorie","BTU","Joule"],answer:0},
+{chapter:"Module 2",q:"A bimetallic thermometer is made of ",level:2,options:["Two dissimilar metals strips bonded together","Three dissimilar metals strips bonded together","Two similar metals strips bonded together"],answer:0},
+{chapter:"Module 2",q:"What is the principle of a resistance thermometer?",level:2,options:["Electrical resistance changes as the temperature of the metal changes","The electrical resistance of a metal decreases as the temperature rises","The electrical resistance of a metal increases as the temperature decrease"],answer:0},
+{chapter:"Module 2",q:"What is correct stament for heat?",level:2,options:["Heat is a form of energy","When two surfaces are rubbed together, they become cool","When the gas expand, it becomes arm or hot"],answer:0},
+{chapter:"Module 2",q:"How does heat energy generated?",level:2,options:["When two surfaces are rubbed together","When objects stop moving","Heat is generated by cooling objects down"],answer:0},
+{chapter:"Module 2",q:"Where is the sensing bulb of a direct reading bimetallic temperature gauges placed?",level:2,options:["In the area needing to have temperature measured.","Close to the area needing to have temperature measured.","Far from the area needing to have temperature measured."],answer:0},
+{chapter:"Module 2",q:"What is operation principle of the Wheatstone-bridge meter?",level:2,options:["It operates on the principle of balancing one unknown resistor against other known resistances","It operates on the principle of imbalancing of four known resistances","It operates on the principle of imbalancing of five known resistances"],answer:0},
+{chapter:"Module 2",q:"What is operation principle of the ratiometer electrical resistance thermometer ?",level:2,options:["Measures a ratio of current flows in a variable resistance and a fixed resistance  ","It operates on the principle of balancing one unknown resistor against other known resistances","Measures a ratio of voltage in a variable resistance and a fixed resistance  "],answer:0},
+{chapter:"Module 2",q:"What is purpose of the thermocouple?",level:2,options:["Is used to measure high temperatures","Is used to measure low and medium temperatures ","Is used to measure outside air temperature "],answer:0},
+{chapter:"Module 2",q:"What happen when a gas is compressed?",level:2,options:["The gas becomes warm or hot","The gas becomes cool","The gas temprature does not change"],answer:0},
+{chapter:"Module 2",q:"What is heat?",level:1,options:["A form of energy produced by converting other forms of energy","A form of temperature produced by converting other forms of energy","A form of energy produced by converting other forms of temperature"],answer:0},
+{chapter:"Module 2",q:"What is the total kinetic energy of the molecules in a substance called?",level:1,options:["Heat","Energy ","Temperature"],answer:0},
+{chapter:"Module 2",q:"What happens when a gas is compressed?",level:1,options:["Becomes warm","Becomes colder","Turns into a solid"],answer:0},
+{chapter:"Module 2",q:"What happens when a high-pressure gas is allowed to expand?",level:1,options:["Becomes colder","Becomes warm","Turns into a liquid"],answer:0},
+{chapter:"Module 2",q:"What happens when two surfaces are rubbed together?",level:1,options:["Generate heat","Generate electricity","Generate static charge"],answer:0},
+{chapter:"Module 2",q:"What is the relationship between work and the heat produced by friction?",level:1,options:["Work and heat produced by friction are proportional","The more work done, the less heat is produced","Heat is produced only without work"],answer:0},
+{chapter:"Module 2",q:"Which is a method of producing mechanical energy that increases the motion of molecules?",level:1,options:["Friction, impact of gases","Using magnetic fields","Melting a solid"],answer:0},
+{chapter:"Module 2",q:"What happens when electrical energy flows through a resistance?",level:1,options:["It is converted into heat energy","It turns into sound energy","It is stored as chemical energy"],answer:0},
+{chapter:"Module 2",q:"What happens during most chemical reactions involving stored potential energy?",level:1,options:["The stored potential energy is converted into heat","The energy is stored as sound","The energy is lost completely"],answer:0},
+{chapter:"Module 2",q:"What happens when electromagnetic waves like infrared rays are absorbed by a surface?",level:1,options:["The surface is heated","The surface becomes magnetic","The surface produces electricity"],answer:0},
+{chapter:"Module 2",q:"How is nuclear energy released?",level:1,options:["During the process of nuclear fission in a reactor","When atoms gain electrons from heat","Through friction between particles"],answer:0}
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer)
+        label.classList.add("wrong");
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length}`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer)
+      label.classList.add("wrong");
+  });
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const countInput = document.getElementById("questionCount");
+  let count = parseInt(countInput.value);
+
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  pool = JSON.parse(JSON.stringify(pool));
+
+  if (shuffleEnabled) shuffleArray(pool);
+
+  questions = pool.slice(0, count);
+
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const count = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("questionCount").value = count;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+}
+
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
