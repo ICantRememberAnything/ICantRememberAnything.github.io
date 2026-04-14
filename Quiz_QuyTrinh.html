@@ -1,0 +1,457 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 10 - Offline Quiz</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz Quy Trình</h2>
+<h3>Tự check lại đáp án nhé</h3>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="updateChapterSize()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    From:
+    <input type="number" id="rangeStart" value="1" min="1">
+  </label>
+
+  <label>
+    To:
+    <input type="number" id="rangeEnd" value="50" min="1">
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All in range</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+</div>
+
+
+<div id="quiz"></div>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{"chapter":"ANHK","q":"Câu 1: Giấy phép KSAN nội bộ loại nào sau đây được phép ra vào khu vực hạn chế?","options":["Giấy phép màu xanh","Giấy phép màu vàng","Cả 2 đáp án trên"],"answer":1},
+{"chapter":"ANHK","q":"Câu 2: Hành vi nào sau đây là sai?","options":["Quay phim, chụp ảnh trong khu vực hạn chế khi chưa được phép của cấp có thẩm quyền","Đưa người không có nhiệm vụ vào khu vực hạn chế","Cả 2 đáp án trên"],"answer":2},
+{"chapter":"ANHK","q":"Câu 3: QCAN VAECO được áp dụng cho các đối tượng nào?","options":["CBCNV Công ty","Đối tác, khách hàng đến làm việc, học tập tại Công ty","Cả 2 đáp án trên"],"answer":2},
+{"chapter":"ANHK","q":"Câu 4: Ai là người đứng đầu hệ thống quản lý ANHK của Công ty?","options":["Tổng Giám đốc","Trưởng phòng An ninh","Phó Tổng Giám đốc phụ trách an ninh"],"answer":2},
+{"chapter":"ANHK","q":"Câu 5: Quy chế An ninh hàng không VAECO bao gồm bao nhiêu chương?","options":["10","11","12"],"answer":2},
+{"chapter":"ANHK","q":"Câu 6: QCAN VAECO không được áp dụng cho đối tượng nào sau đây?","options":["CBCNV Công ty","Đối tác, khách hàng đến làm việc, học tập tại Công ty.","Đối tác, khách hàng đến làm việc tại Cảng Hàng không","A,B,C đúng"],"answer":2},
+{"chapter":"ANHK","q":"Câu 7: Phạm vi điều chỉnh của Nghị định 92/NĐ-CP ngày 13/10/2015 là gì?","options":["Quy định chi tiết về quản lý, khai thác cảng hàng không, sân bay.","Quy định về hoạt động của tàu bay công vụ, bao gồm tàu bay quân sự, tàu bay chuyên dụng của lực lượng hải quan, công an và các tàu bay khác sử dụng cho muc đích công vụ nhà nước.","Quy định về hoạt động hàng không dân dụng, bao gồm các quy định về tàu bay, cảng hàng không, sân bay, nhân viên hàng không, hoạt động bay, vận chuyển hàng không, an ninh hàng không, trách nhiệm dân sự, hoạt động hàng không chung.","Quy định về các biện pháp kiểm soát an ninh hàng không; đối phó với hành vi can thiệp bất hợp pháp vào hoạt động hàng không dân dụng; lực lượng kiểm soát an ninh hàng không; kết cấu hạ tầng, trang bị, thiết bị và phương tiện bảo đảm an ninh hàng không; kinh phí bảo đảm an ninh hàng không; trách nhiệm của tổ chức, cá nhân liên quan trong công tác bảo đảm an ninh hàng không."],"answer":3},
+{"chapter":"ANHK","q":"Câu 8: Nghị định số 92/2015/NĐ-CP do cơ quan, tổ chức nào ban hành?","options":["Cục Hàng không dân dụng Việt Nam.","Chính phủ.","Tổng công ty Cảng hàng không Việt Nam.","Bộ Giao thông vận tải."],"answer":1},
+{"chapter":"ANHK","q":"Câu 9: Nguyên tắc chung khi sử lý vật nghi vấn.","options":["Cả hai ý trên đều đúng;","Cả hai ý trên đều sai;","Không được đụng, chạm hoặc di chuyển đồ vật nghi vấn;","Tổ chức triển khai phương án đối phó cụ thể;"],"answer":2},
+{"chapter":"ANHK","q":"Câu 10: Quyết định số 1541/ QĐ-CHK ngày 14/09/2021 của Cục trưởng Cục Hàng Không Việt Nam. Kéo có lưỡi dài trên 06 cm tính từ trục của kéo hoặc tổng chiều dài cán và lưỡi trên 10 cm; Có được phép mang vào khu vực hạn chế, mang lên tàu bay không?","options":["Đáp án A đúng","Không được phép","Được phép"],"answer":1},
+{"chapter":"ANHK","q":"Câu 11: Có bao nhiêu tổ chức khủng bố két tiếng nhất thế giới:","options":["5","6","10"],"answer":2},
+{"chapter":"ANHK","q":"Câu 12: Những nguy cơ đe dọa vẫn hiện hữu là những thách thức lớn đối với hoạt động hang không dân dụng đó là:","options":["Trộm cắp tài sản","Gây rối trật tự công cộng.","Khủng bố, Chiến tranh, xung đột vũ trang mất ổn định chính trị, xã hội."],"answer":2},
+{"chapter":"ANHK","q":"Câu 13: Thẻ KSAN nào sau đây được phép lên tàu bay?","options":["Thẻ màu xanh","Thẻ màu đỏ","Thẻ màu vàng"],"answer":1},
+{"chapter":"ANHK","q":"Câu 14: Khẳng định nào sao đây là sai?","options":["QCAN VAECO là tài liệu hạn chế","QCAN VAECO là tài liệu không hạn chế, bất cứ ai cũng có quyền truy cập","QCAN VAECO được phân quyền truy cập cho Thủ trưởng các cơ quan/đơn vị"],"answer":1},
+{"chapter":"ANHK","q":"Câu 15: QCAN VAECO do cơ quan, đơn vị nào phê duyệt?","options":["Tổng Công ty HKVN","Cảng vụ Hàng không","Cục hàng không Việt Nam"],"answer":2},
+{"chapter":"ANHK","q":"Câu 16: Thẻ KSAN cần được đeo như thế nào?","options":["Để trong túi áo, túi quần","Đeo trước ngực đảm bảo quan sát được mặt trước của thẻ","Cất trong phòng làm việc tránh trường hợp rơi mất"],"answer":1},
+{"chapter":"ANHK","q":"Câu 17: Việc đối phó với hành vi can thiệp bất hợp pháp phải thực hiện các nguyên tắc nào sau đây?","options":["Thực hiện nguyên tắc 2 tại chỗ, bao gồm: Phương án đối phó tại chỗ; lưc lượng tại chỗ.","Thực hiện nguyên tắc 3 tại chỗ, bao gồm: Phương án đối phó tại chỗ; lưc lượng tại chỗ; trang thiết bị tại chỗ.","Thực hiện nguyên tắc 4 tại chỗ, bao gồm: Phương án đối phó tại chỗ; lưc lượng tại chỗ; trang thiết bị tại chỗ; hậu cần tại chỗ.","Đáp án A và B đúng."],"answer":2},
+{"chapter":"ANHK","q":"Câu 18: Quy trình tiếp nhận và xử lý dấu hiệu nghi ngờ.","options":["Người phát hiện mối nghi ngờ giữ nguyên hiện trường và thông báo ngay lập tức tới lãnh đạo cấp trên hoặc lực lượng an ninh Công ty","Nhớ các đặc điểm của vật nghi vấn, đánh dấu khu vực xung quanh vật nghi vấn bằng cách đặt những đồ dùng dễ nhận biết gần vật nghi ngờ;","Truy tìm nguồn gốc của vật đáng ngờ và đề nghị xử lý vi phạm."],"answer":0},
+{"chapter":"ANHK","q":"Câu 19: Khi phát hiện vật phẩm nguy hiểm trong khu vực hạn chế . Quy trình sử lý ?","options":["A. Quy trình được quy định cụ thể trong Quy chế An ninh của VAECO, cụ thể tuân theo các quy định sau:","B. Khi phát hiện vật phẩm nguy hiểm không có giấy phép theo quy định của pháp luật, NVKSAN lập Biên bản vi phạm ANHK theo mẫu tại Mục 12.3.4, chương 12, QCAN VAECO; chuyển giao người, hồ sơ, vật phẩm nguy hiểm cho Cảng vụ hàng không khu vực để xử lý.","C. Khi phát hiện vậtphẩm nguy hiểm không được phép mang vào khu vực hạn chế, NVKSAN hướng dẫn bỏ lại hoặc từ chối hoàn thành thủ tục kiểm tra ANHK.","Đáp án A.B.C sai","Đáp án A.B.C đúng"],"answer":4},
+{"chapter":"ANHK","q":"Câu 20: Hành khách, hành lý xách tay phải được kiểm tra an ninh bằng soi chiếu an ninh hang không 100%; hành khách từ chối soi chiếu an ninh hàng không sẽ bị từ chối vận chuyển.","options":["Đúng","Sai"],"answer":0},
+{"chapter":"ANHK","q":"Câu 21: Thời gian Huấn luyện định kỳ kiến thức ANHK cho nhân viên sửa chữa, bảo dưỡng tàu bay?","options":["3 năm/1 lần","1 năm/1 lần","2 năm/1 lần"],"answer":0},
+{"chapter":"ANHK","q":"Câu 22: Theo quy định tại Nghị định số 92/2015/NĐ-CP, có bao nhiêu biện pháp kiểm soát an ninh tăng cường được thực hiện khi có nguy cơ cao đối với an ninh hàng không?","options":["3 cấp độ.","4 cấp độ.","2 cấp độ.","5 cấp độ."],"answer":0},
+{"chapter":"ANHK","q":"Câu 23: Quyết định số 1541/ QĐ-CHK ngày 14/09/2021 của Cục trưởng Cục Hàng Không Việt Nam về việc ban hành danh mục vật phẩm nguy hiểm cấm, hạn chế mang vào khu vực hạn chế, mang lên tàu bay. Được chia làm mấy danh mục?","options":["7 Ddanh mục","6 Danh mục","5 Danh mục","4 Danh mục"],"answer":2},
+{"chapter":"ANHK","q":"Câu 24: Công tác an ninh hàng không đóng vai trò quan trọng và cần thiết trong hoạt động của ngành hàng không là bảo đảm an toàn cho:","options":["Tàu bay, hành khách","Phi hành đoàn và các cơ sở hạ tầng hàng không","A,B đúng"],"answer":2},
+{"chapter":"ANHK","q":"Câu 25: Lục soát an ninh hàng không:","options":["-Là việc kiểm tra chi tiết từng đồ vật, vị trí của đối tượng, người bị lục soát nhằm phát hiện, ngăn chặn vũ khí, chất nổ hoặc thiết bị, vật phẩm nguy hiểm khác để loại trừ yếu tố gây uy hiếp an ninh hàng không","-Là việc nhân viên An ninh hàng không trực tiếp sử dụng tay, mắt và các giác quan khác để kiểm tra người, phương tiện, đồ vật nhằm nhận biết và phát hiện vật đáng ngờ, vật phẩm nguy hiểm","Là việc sử dụng riêng lẻ hoặc kết hợp biện pháp soi chiếu, kiểm tra trực quan và các biện pháp khác để nhận biết, phát hiện, ngăn chặn các hành vi vi phạm hoặc có dấu hiệu vi phạm về an ninh hàng không"],"answer":0},
+{"chapter":"ANHK","q":"Câu 26: Tại mỗi điểm kiểm tra an ninh hàng không phải bố trí đủ nhân viên kiểm soát an ninh hàng không bảo đảm thực hiện đầy đủ, hiệu quả các nhiệm vụ như:","options":["- Kiểm tra, đối chiếu giấy tờ về nhân thân của hành khách với vé, thẻ lên tàu bay bằng giấy hoặc trên thiết bị điện tử (điện thoại, máy tính…) và hành khách","- Hướng dẫn hành khách thực hiện các yêu cầu cởi bỏ vật dụng cá nhân, đặt hành lý, đồ vật lên băng chuyền máy soi tia X","- Kiểm tra hành khách bằng thiết bị phát hiện kim loại cầm tay, dụng cụ, thiết bị phát hiện chất nổ, kiểm tra trực quan, lục soát hành khách","- A,B,C đúng"],"answer":3},
+{"chapter":"ANHK","q":"Câu 27: Tàu bay đang khai thác phải được thực hiện các biện pháp đã quy định và các yêu cầu sau:","options":["- Được giám sát an ninh hàng không liên tục hoặc được đóng, khóa, niêm phong cửa tàu bay","- Người khai thác tàu bay chịu trách nhiệm tổ chức kiểm soát người, đồ vật lên, xuống tàu bay","- Đáp án A, B đúng"],"answer":2},
+{"chapter":"ANHK","q":"Câu 28: Trách nhiệm của Cục Hàng không Việt Nam.","options":["- Thực hiện nhiệm vụ, quyền hạn của Nhà chức trách hàng không đối với công tác bảo đảm an ninh hàng không theo quy định của pháp luật","- Phê duyệt, chấp thuận và giám sát thực hiện chương trình an ninh, quy chế an ninh hàng không của các đơn vị hoạt động trong lĩnh vực hàng không","- Đáp án AB đúng."],"answer":2},
+{"chapter":"ANHK","q":"Câu 29: Luật phòng chống khủng bố số 28/2013/QH13 ngày 12/06/2013 có hiệu lực thi hành từ ngày, tháng, năm nào?","options":["- Ngày 10/01/2013","- Ngày 01/10/2013","- Ngày 06/12/2013","-Ngày 01/01/2014"],"answer":1},
+{"chapter":"ANHK","q":"Câu 30: Hành vi chiếm đoạt, gây bạo loạn tại cảng hàng không, sân bay và cơ sở cung cấp dịch vụ điều hành bay sẽ bị cấm vận chuyển bằng đường hàng không thời gian bao lâu?","options":["-Có thời hạn từ 03 đến 12 tháng","- Có thời hạn từ 03 đến 12 tháng.","Có thời hạn trên 24 đến 36 tháng.","- Câm vận chuyên vĩnh viễn."],"answer":3},
+{"chapter":"ANHK","q":"Câu 31: Ủy ban An ninh hàng không dân dụng quốc gia là gì?","options":["-Tổ chức phối hợp liên ngành, có chức năng giúp Cục Hàng không Việt Nam chỉ đạo, phối hợp giải quyết những vấn đề quan trọng liên ngành về bảo đảm an ninh hàng không.","-Tổ chức phối hợp liên ngành, có chức năng giúp Bộ Giao thông vận tải chỉ đạo, phối hợp giải quyết những vấn đề quan trọng liên ngành về bảo đảm an ninh hàng không.","-Tổ chức phối hợp liên ngành, có chức năng giúp Thủ tướng Chính phủ chỉ đạo, phối hợp giải quyết những vấn đề quan trọng liên ngành về bảo đảm an ninh hàng không.","-Có chức năng giúp Bộ Giao thông vận tải chỉ đạo, phối hợp giải quyết những vấn đề quan trọng liên quan đến phòng chống khủng bố trong ngành an ninh hàng không."],"answer":2},
+{"chapter":"ANHK","q":"Câu 32: Trách nhiệm của Ủy ban An ninh hàng không dân dụng quốc gia trong công tác bảo đảm ANHK là gì?","options":["a.Tổ chức định kỳ đánh giá nguy cơ uy hiếp an ninh hàng không.","b.Chỉ đạo hoàn thiện, nâng cấp hệ thống bảo đảm an ninh hàng không.","c.Chỉ đạo thực hiện Phương án khẩn nguy tổng thể đối phó với hành vi can thiệp bất hợp pháp vào hoạt động hàng không dân dụng.","-Đáp án A, B và C đúng.","-Đáp án A và C đúng."],"answer":3},
+{"chapter":"ANHK","q":"Câu 33: Quy chế An ninh hàng không VAECO do ai ban hành?","options":["-Cục trưởng Cục Hàng không Việt Nam","- Tổng Giám đốc VAECO","- Tổng Giám đốc VNA"],"answer":1},
+{"chapter":"ANHK","q":"Câu 34: Thẻ KSAN nào sau đây được phép ra vào khu vực hạn chế?","options":["- Thẻ màu vàng, thẻ màu xanh","- Thẻ màu đỏ. thẻ màu vàng","- Thẻ màu đỏ, thẻ màu xanh"],"answer":1},
+{"chapter":"ANHK","q":"Câu 35: Cơ quan, đơn vị nào sau đây không có Quy chế An ninh","options":["- Công ty TNHH MTV Kỹ thuật máy bay","- Hãng hàng không Việt Nam","- Cả 2 đáp án trên"],"answer":1},
+{"chapter":"ANHK","q":"Câu 36: Đối tượng nào sau đây được phép lên tàu bay đang bảo dưỡng?","options":["-Nhân viên kỹ thuật có tên trong Danh sách làm việc","- Khách đến tham quan Công ty","- Cả 2 đáp án trên"],"answer":0},
+{"chapter":"ANHK","q":"Câu 37: Đối tượng nào sau đây cần phải Huấn luyện kiến thức ANHK?","options":["- Nhân viên sửa chữa, bảo dưỡng tàu bay, nội thất và thiết bị tàu bay","- Toàn bộ CBCNV Công ty","-Toàn bộ khách hàng, đối tác đến Công ty làm việc"],"answer":0},
+{"chapter":"ANHK","q":"Câu 38: Quyết định số 1541/ QĐ-CHK ngày 14/09/2021 của Cục trưởng Cục Hàng Không Việt Nam ban hành là Quyết định gì?","options":["- Quyết định ban hành sổ tay hướng dẫn chất lượng An Ninh Hàng Không.","- Danh mục vật phẩm nguy hiểm cấm , hạn chế màng vào khu vực hạn chế, mang lên tàu bay","- Quyết định ban hành danh mục tài liệu hạn chế lưu hành của Cục HKVN"],"answer":1},
+{"chapter":"ANHK","q":"Câu 39: Kết thúc xử lý dấu hiệu khả nghi. Lãnh đạo công ty báo cáo cho các cơ quan đơn vị nào?","options":["- Tổng giám đốc Tổng công ty Hàng không Việt Nam,","- Cảng vụ Hàng không khu vực,","- Cục HKVN","Cả A B C đều đúng"],"answer":3},
+{"chapter":"ANHK","q":"Câu 40: Đội An Ninh có trách nhiện triển khai!","options":["A. Tổ chức triển khai phương án đối phó cụ thể.","B. Chuẩn bị phương tiện sẵn sàng trực tại nơi có vật đáng ngờ nếu cần đưa vật đáng ngờ đến nơi khác để xử lý.","C. Triệu tập họp khẩn cấp để đánh giá tình hình để có phương án xử lý.","-Đáp án A và B đúng","ABC đều đúng"],"answer":3}
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer)
+        label.classList.add("wrong");
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length}`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer)
+      label.classList.add("wrong");
+  });
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let count = parseInt(document.getElementById("questionCount").value);
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  // Get chapter pool
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  // Clamp range
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  // Apply range (convert to 0-based index)
+  pool = pool.slice(start - 1, end);
+
+  // Fix count
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  // Deep copy
+  pool = JSON.parse(JSON.stringify(pool));
+
+  // Shuffle questions if enabled
+  if (shuffleEnabled) shuffleArray(pool);
+
+  // Pick N
+  questions = pool.slice(0, count);
+
+  // Shuffle answers if enabled
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  const rangeSize = end - start + 1;
+
+  document.getElementById("questionCount").value = rangeSize;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+
+  // Reset range to full chapter
+  document.getElementById("rangeStart").value = 1;
+  document.getElementById("rangeEnd").value = size;
+}
+
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
