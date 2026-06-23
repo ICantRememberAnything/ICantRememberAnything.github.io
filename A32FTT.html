@@ -1,0 +1,854 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Chuyển loại A320/321</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz Chuyển loại A320/321 - Exam 1 (00,28,29,32,49)</h2>
+<h3>Tự check lại đáp án nhé</h3>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="updateChapterSize()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    From:
+    <input type="number" id="rangeStart" value="1" min="1">
+  </label>
+
+  <label>
+    To:
+    <input type="number" id="rangeEnd" value="50" min="1">
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All in range</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+</div>
+
+
+<div id="quiz"></div>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapter:"00: General",q:"1. The A318, A319, A320 and A321 (A320 family) are:",options:["A. Single Aisle, twin-engine subsonic medium range aircraft.","B. Single Aisle, twin-engine subsonic short range aircraft.","C. Double Aisle, four-engine subsonic long range aircraft."],answer:0},
+{chapter:"00: General",q:"2. Amber colour is used:",options:["A. For failure needing awareness but no need immediate action,","B. For failure needing awareness and immediate action,","C. To indicate normal operation of system."],answer:0},
+{chapter:"00: General",q:"3. How many main zone of the aircraft:",options:["A. Six.","B. Seven.","C. Eight."],answer:2},
+{chapter:"00: General",q:"4. Zone number 100 -199 are located:",options:["A. Lower half fuselage.","B. Upper half fuselage.","C. Landing gear."],answer:0},
+{chapter:"00: General",q:"5. Station 0 is located:",options:["A. 200 inch from nose of aircraft,","B. 150 inch from nose of aircraft,","C. 100 inch from nose of aircraft."],answer:2},
+{chapter:"00: General",q:"6. What you must NOT do:",options:["A. lift the aircraft at the forward jacking point only, with the wheels of the main landing gear on the ground","B. use the safety stay as soon as the lift operation is finished","C. use the safety stay to lift the aircraft"],answer:2},
+{chapter:"00: General",q:"7. What is the correct sequence?",options:["A. install the tow lever safety pin then install the tow bar on the tow fitting","B. install the tow bar on the tow fitting then install the tow lever safety pin","C. there is no specific sequence"],answer:0},
+{chapter:"00: General",q:"8. Where is access panel 540 BB located?",options:["A. On LH wing lower surface","B. On RH wing lower surface","C. On LH wing upper surface"],answer:0},
+{chapter:"00: General",q:"9. Sub-zone for LH side of Horizontal Stabilizer is identified by:",options:["A. 330","B. 530","C. 630"],answer:0},
+{chapter:"00: General",q:"10. What is station number?",options:["A. The station number is the distance in centimeters of a cross-section from the Forward bulkhead.","B. The station number is the distance in centimeters of a cross-section from a reference point.","C. The station number is the distance in inch of a cross-section from a reference point."],answer:1},
+{chapter:"00: General",q:"11. The reference (station 0) for all structural measurements for the X axis is set at:",options:["A. 200 in (508 cm) forward of the A/C nose,","B. 100 in (254 cm) forward of the A/C nose,","C. 100 in (254 cm) after of the A/C nose,"],answer:1},
+{chapter:"00: General",q:"12. Which numbers are identified for the LH wing zones?",options:["A. The 500 numbers,","B. The 600 numbers,","C. The 700 numbers."],answer:0},
+{chapter:"00: General",q:"13. Where is access panel 540 BB located?",options:["A. On LH wing lower surface","B. On RH wing lower surface","C. On LH wing upper surface"],answer:0},
+{chapter:"00: General",q:"14. In towing configurations the safety pin locks the control lever on the interphone box in:",options:["A. Disengaged position.","B. Engaged position.","C. Normal position."],answer:0},
+{chapter:"00: General",q:"15. Access doors and panels are identified by:",options:["A. The number of the zone in which the panel is located followed by a two-letter suffix.","B. The number of the zone in which the panel is located followed by one letter suffix.","C. a two-letter followed by the number of the zone in which the panel is located suffix."],answer:0},
+{chapter:"00: General",q:"16. The maximum permitted steering-angle on each side of the aircraft centerline is",options:["A. 95 degrees.","B. 75 degrees.","C. 74 degrees."],answer:0},
+{chapter:"00: General",q:"17. Communication system(s) to be used during towing is (are)?",options:["A. VHF and FLT INT.","B. VHF or HF with FLT INT.","C. VHF only."],answer:0},
+{chapter:"00: General",q:"18. What indication on ECAM do you have to check prior to start towing?",options:["A. N WHEEL STEERG DISC","B. N WHEEL STEERG INOP","C. N WHEEL STEERG OFF"],answer:0},
+{chapter:"00: General",q:"19. In the AMM tasks, “WARNING” is meant:",options:["A. Calls attention to use of materials, processes, methods, procedures or limits which must be followed precisely to avoid injury of death to persons","B. Calls attention to methods and procedures which be followed to avoid damage to equipment","C. Calls attention to methods which make the job easier or provide supplementary or explanatory information"],answer:0},
+{chapter:"00: General",q:"20. Minimum separation from the nose wheels and the tractor while towing the aircraft is:",options:["A. 2 m","B. 3 m.","C. 4 m."],answer:1},
+{chapter:"00: General",q:"21. The aircraft frame 24 station is 950, it means:",options:["A. The frame 24 distance to the reference point is 950 cm","B. The frame 24 distance to the reference point is 950 inch","C. The frame 24 distance to the aircraft nose is 950 cm"],answer:0},
+{chapter:"00: General",q:"22. Zone 713 location at",options:["A. The tail area","B. The cargo compartment area","C. The landing gear area"],answer:2},
+{chapter:"00: General",q:"23. Application of flight configuration precaution is required when",options:["A. Lifting the aircraft on jacks","B. Jacking a MLG for wheels change","C. Lifting the aircraft at Forward Jacking Point, MLG Wheels on the Ground"],answer:0},
+{chapter:"00: General",q:"24. You can weigh the aircraft with",options:["A. The aircraft on jacks only","B. The aircraft on its wheels only","C. The aircraft on jacks or the aircraft on its wheels or the aircraft on landing gear jacks"],answer:2},
+{chapter:"00: General",q:"25. When the NLG dimension H is more than 300 mm",options:["A. Do not tow the aircraft to prevent damage to the centering cams","B. Do not tow the aircraft to prevent tail to ground contact","C. Smooth and speed limited towing is possible"],answer:0},
+{chapter:"00: General",q:"26. Safety requirements for aircraft refueling and defueling are",options:["A. Operate the cell phones or mobile phones inside distances for 6m from aircraft is allowed","B. Perform the operation test of the beacon or strobe light system","C. Do not operate the weather radar or HF system"],answer:2},
+{chapter:"00: General",q:"27. When you do the refueling and/or defueling in the hangar",options:["A. The hangar doors must be closed until you have completed the refuel/defuel procedure","B. The hangar doors must not be closed until you have completed the refuel/defuel procedure","C. There is no requirement for hangar door"],answer:1},
+{chapter:"00: General",q:"28. The X axis in the:",options:["A. Longitudinal direction of the fuselage,","B. Direction of the wing span,","C. Vertical direction."],answer:0},
+{chapter:"00: General",q:"29. The Y axis in the:",options:["A. Vertical direction,","B. Longitudinal direction of the fuselage,","C. Direction of the wing span."],answer:2},
+{chapter:"00: General",q:"30. The Z axis in the:",options:["A. Longitudinal direction of the fuselage,","B. Vertical direction,","C. Direction of the wing span."],answer:1},
+{chapter:"00: General",q:"31. When you set the BAT 1&2 P/BSW to AUTO position:",options:["A. The right hand dome light is on,","B. The left hand dome light is on,","C. Both dome lights are on."],answer:0},
+{chapter:"00: General",q:"32. When you perform the pedestal panel check list. On the center pedestal, verify that the speed brake handle is in the:",options:["A. Extend/disarm position,","B. Retract/disarm position,","C. Retract/arm position."],answer:1},
+{chapter:"00: General",q:"33. When you perform the overhead panel checklist and a/c power supply. The voltage should be about 25 volts with:",options:["A. The BAT 1&2 P/BSWs in ON position,","B. The BAT 1&2 P/BSWs in AUTO position,","C. The BAT 1&2 P/BSWs in OFF position."],answer:2},
+{chapter:"00: General",q:"34. Each area is identified by:",options:["A. The major zones, the sub-zones, the zones.","B. The zones and sub-zones.","C. The major zones and the zones"],answer:0},
+{chapter:"00: General",q:"35. ST9500/FR24 is located:",options:["A. 9500 cm from the reference point","B. 9500 mm from the reference point","C. 9500 mm from the aircraft nose"],answer:1},
+{chapter:"00: General",q:"36. How does the flight crew manually fly the aircraft?",options:["A. by control columns","B. by side sticks mounted on the center pedestal","C. by side sticks mounted on the side consoles"],answer:2},
+{chapter:"00: General",q:"37. Where safety instructions can be found?",options:["A. in SRM(Structure Repair Manual)","B. in AMM(Aircraft maintenance Manual)","C. in ASM(Aircraft schematic manual)"],answer:1},
+{chapter:"00: General",q:"38. Zone number 700 -799 are located:",options:["A. Lower half fuselage,","B. Upper half fuselage,","C. Landing gear."],answer:2},
+{chapter:"00: General",q:"39. Engine install on the VNA CEO A321 A/C is:",options:["A. V2500","B. CFM 56","C. PW 4000"],answer:0},
+{chapter:"00: General",q:"40. What is Safety precautions must be taken to avoid danger from engine suction and exhaust areas?",options:["A. Access to the engine is only allowed through the entry corridor. Entry corridor must be closed for wind direction greater than 90o. There is no safe access corridor when the engine is running above minimum idle.","B. Access to the engine is allowed entry in front of engine when engine is runing above minimum idle.","C. Access to the engine is allowed entry behide of engine when engine is runing above minimum idle."],answer:0},
+{chapter:"00: General",q:"41. Where can you check Attitude (ATT) of the A/C?",options:["A. ATT monitor","B. MCDU","C. MCDU or ATT monitor"],answer:2},
+{chapter:"00: General",q:"42. The GENERAL TAIL PLANE section base number is",options:["A. 10","B. 20","C. 30"],answer:2},
+{chapter:"00: General",q:"43. for ZONE NUMBER, the EVEN numbers identify the ones on",options:["A. the RH side of the A/C","B. the LH side of the A/C","C. the upper fuselage of the A/C"],answer:0},
+{chapter:"00: General",q:"44. Which jacking point use to lift the aircraft?",options:["A. Nose l/g jacking point and main landing gears jacking point and safety stay","B. Nose l/g jacking point and main landing gears jacking point","C. Safety stay only"],answer:1},
+{chapter:"00: General",q:"45. Towing can be carried out using:",options:["A. Towbar or towbarless tractor at NLG","B. Towbar or towbarless tractor at MLG","C. Towbar at NLG only."],answer:0},
+{chapter:"00: General",q:"46. A 320/321 are the aircrafts with:",options:["A. rod flight controls","B. cable flight controls","C. flight-by-wire flight controls"],answer:2},
+{chapter:"00: General",q:"47. For the horizontal stabilizer the reference station 0 is at the horizontal Y axis and at:",options:["A. the horizontal stabilizer tip","B. the horizontal stabilizer root","C. the middle horizontal stabilizer"],answer:1},
+{chapter:"00: General",q:"48. If an ENGINE is running",options:["A. You can tow the aircraft from the front only.","B. You can push the aircraft only.","C. Either tow or push is possible."],answer:2},
+{chapter:"00: General",q:"49. The maximum SAFETY PRESSURE for refueling is:",options:["A. 45psi","B. 50psi","C. 60psi"],answer:1},
+{chapter:"00: General",q:"50. The fuselage section base number is: (level 1)",options:["A. 10","B. 20","C. 30"],answer:0},
+{chapter:"00: General",q:"51. There is no safe access to the engine through the entry corridor when: (level 1)",options:["A. Engine is running up to minimum idle","B. Engine is running above minimum idle","C. Engine is running at any power setting"],answer:1},
+{chapter:"00: General",q:"52. If the aircraft does not point into the wind and wind speed or gusts more than 50 Kts, moor the aircraft at: (level 1)",options:["A. MLG","B. NLG","C. MLG and NLG"],answer:2},
+
+{chapter:"ATA 28",q:"1. A320, fuel stored in: (level 1)",options:["A. Center tank, inner cell, outer cell and vent surge tank","B. Center tank, inner cell, and vent surge tank","C. Center tank, inner cell and outer cell"],answer:2},
+{chapter:"ATA 28",q:"2. Fuel is used (level 1)",options:["A. First center tank, outer cell then inner cell","B. First inner cell, outer cell then center tank","C. First center tank, inner cell then outer cell"],answer:2},
+{chapter:"ATA 28",q:"3. Transfer valves allow fuel to be transferred from (level 1)",options:["A. Inner to Outer cells.","B. Outer to Inner cells.","C. Left to right wing"],answer:1},
+{chapter:"ATA 28",q:"4. Transfer valves are controlled by (level 2)",options:["A. low level sensors in Inner cell","B. high level sensors in outer cell","C. low level sensors in Inner cell and high level sensors in outer cell"],answer:0},
+{chapter:"ATA 28",q:"5. APU pump runs (level 2)",options:["A. when a tank pump push button is set to ON","B. when a tank pump push button is set to OFF","C. if the tank pumps are not operating"],answer:2},
+{chapter:"ATA 28",q:"6. The MODE SEL pushbutton selects (level 2)",options:["A. the center tank pumps to automatic or manual mode","B. the center tank and wing tank pumps to automatic or manual mode","C. the fuel feeding to automatic or manual mode"],answer:0},
+{chapter:"ATA 28",q:"7. In MAN mode, the CTR TK pumps are (level 2)",options:["A. manually switched off when the CTR TK is empty","B. automatically switched off when the CTR TK is empty","C. automatically switched off when the CTR TK is low level and 5 minutes"],answer:0},
+{chapter:"ATA 28",q:"8. Amber box on FOB means (level 2)",options:["A. FOB is not accurate","B. FOB is too low","C. FOB is not entirely usable"],answer:2},
+{chapter:"ATA 28",q:"9. After landing, engines stop F.USED Is (level 2)",options:["A. zero","B. amber","C. Not zero"],answer:2},
+{chapter:"ATA 28",q:"10. ECAM displays “FUEL: AUTO FEED FAULT” when (level 2)",options:["A. Wing tank pumps run while center tank pumps is running","B. L or R wing tank less than 5000 KG and the center tank is above 250 KG","C. center tank pumps stop before center tank low level"],answer:1},
+{chapter:"ATA 28",q:"11. After cooling IDG oil, fuel returns to (level 1)",options:["A. outer cell","B. inner cell","C. center tank"],answer:0},
+{chapter:"ATA 28",q:"19. A321, when auto refuel (level 3)",options:["A. ACT will be refueled regardless the preselected fuel quantity","B. ACT will only be refueled if the preselected fuel quantity is greater than the maximum capacity of both the center tank and the wing tanks","C. ACT will be refueled after center tank is full"],answer:1},
+{chapter:"ATA 28",q:"20. The fuel in the ACT(Additional Center Tank) on A321 is emptied first by forward transferring using: (level 1)",options:["A. ACT transfer pump","B. suction of jet pumps of center tank","C. cabin pressure"],answer:0},
+{chapter:"ATA 28",q:"21. If fuel quantity in wing tanks are not balanced before refuel: (level 2)",options:["A. Fuel automatically becomes balance after automatic refuel.","B. You have to balance the tanks by manual refuel operation.","C. It is accepted to have fuel in wing tanks not balancing."],answer:0},
+{chapter:"ATA 28",q:"22. The Fuel Used indication on ECAM is reset: (level 2)",options:["A. Manually by the pilot.","B. Automatically at engine start on the ground.","C. Automatically at electric power up of the aircraft."],answer:1},
+{chapter:"ATA 28",q:"23. What happens when the first inner tank level reaches 750kg ( A320)? (level 3)",options:["A. Transfer valves on the associated wing will open","B. One transfer valve in each wing will open","C. The centre tank pumps will stop"],answer:1},
+{chapter:"ATA 28",q:"24. The Fuel Quantity Indicating System comprises: (level 3)",options:["A. Two FQIC and two FLSCU.","B. One FQIC and two FLSCU.","C. One FQIC and one FLSCU."],answer:1},
+{chapter:"ATA 28",q:"25. Center tank is supplying, are wing tank pumps running? (level 3)",options:["A. Yes, wing tank pumps are always running.","B. No, only when center tank is empty.","C. No, because of center tank pump priority."],answer:0},
+{chapter:"ATA 28",q:"26. The engine LP valve closes when: (level 2)",options:["A. The fuel booster pumps pressure decreases.","B. The engine is shut down or the ENG FIRE pushbutton is released out.","C. The engine fire detection system senses an engine fire."],answer:1},
+{chapter:"ATA 28",q:"27. What is the function of the main pump pressure switch? (level 3)",options:["A. Monitor the pump pressure for the low pressure warning","B. Monitor the pump for overpressure warning.","C. Stop the pump when over pressure occurred"],answer:0},
+{chapter:"ATA 28",q:"28. The APU pump operation is controlled by: (level 3)",options:["A. APU Pressure switch.","B. A push-button switch on the overhead panel.","C. A push-button switch on the Refuel/Defuel panel"],answer:0},
+{chapter:"ATA 28",q:"29. Refuel valves may be actuated: (level 3)",options:["A. Electrically only.","B. Manually only.","C. Electrically or manually."],answer:2},
+{chapter:"ATA 28",q:"30. The fuel level magnetic indicators are used when: (level 3)",options:["A. The quantity indicating system is inoperative.","B. There is no electrical power.","C. There is no electrical power and the quantity indicating system is inoperative."],answer:2},
+{chapter:"ATA 28",q:"31. Which statement below is true regarding A321?(level 3)",options:["A. The XFR valves are automatically set to open or closed, independently of each other.","B. In MAN mode the XFR valves operates continuosly until the related CTR TK XFR sw is released out.","C. Both are correct"],answer:2},
+{chapter:"ATA 28",q:"32. The recirculation fuel is returned into(A320): (level 1)",options:["A. Wing tank outer cell,","B. Center tank,","C. Wing tank inner cell."],answer:0},
+{chapter:"ATA 28",q:"33. APU fuel can be supplied from? (level 3)",options:["A. L/H engine fuel feed system.","B. R/H engine fuel feed system.","C. L/H or R/H depends on position of cross-feed valve."],answer:2},
+{chapter:"ATA 28",q:"34. Push and hold APU fuel Vent Push button in APU compartment caused: (level 3)",options:["A. APU pump operates; APU fuel low pressure valve open to purge APU fuel feed line.","B. To prevent APU pump operation.","C. APU pump operates; APU fuel low pressure valve open to ventilate APU fuel feed line."],answer:0},
+{chapter:"ATA 28",q:"35. What statement is correct about APU pump? (level 2)",options:["A. The pump running as long as it is turned on.","B. The pump running when pressure in the cross-feed line is low.","C. The pump running when pressure in the cross-feed line is high."],answer:1},
+{chapter:"ATA 28",q:"36. How to transfer Additional Center Tank (ACT) fuel to inner tank? (level 3)",options:["A. By manual and automatic mode.","B. Only automatic mode.","C. ACT fuel transfer to center tank only."],answer:2},
+{chapter:"ATA 28",q:"37. Push and hold HI LVL test push button on fuel service panel, you: (level 1)",options:["A. Do the high level function test.","B. Do the light and indication test.","C. All above."],answer:2},
+{chapter:"ATA 28",q:"38. A321 fuel system: (level 3)",options:["A. Fuel in center tank is directly feed engines by 2 center tank pumps.","B. Fuel in center tank is transferred to inner tank to feed engines.","C. Fuel first feed engines from inner tank, when inner tank is empty. The center tank pumps start to transfer fuel to inner tank."],answer:1},
+{chapter:"ATA 28",q:"39. A320 engine fuel feed system: (level 3)",options:["A. Fuel in wing tank is empty first by the sequence valve.","B. Fuel in center tank is empty first by the sequence valve.","C. When slat is extended, only 2 center tank pumps are running to feed engine."],answer:1},
+{chapter:"ATA 28",q:"40. If all fuel pumps are inoperative. Engines are still supplied fuel by: (level 2)",options:["A. Gravity suction valve.","B. Suction by engine fuel drive pump via suction valve.","C. Suction by engine fuel drive pump via sequence valve."],answer:1},
+{chapter:"ATA 28",q:"41. The recirculated fuel is returned into the: (A320) (level 1)",options:["A. Wing tank outer cell,","B. Center tank,","C. Wing tank inner cell."],answer:0},
+{chapter:"ATA 28",q:"42. The APU fuel system: (level 2)",options:["A. Uses it's own dedicated DC powered fuel pump.","B. Obtains fuel from either center tank pump.","C. Obtains fuel from the left fuel manifold via the left side fuel pumps or if needed, the APU fuel pump."],answer:2},
+{chapter:"ATA 28",q:"43. What does the fuel mode sel pushbutton control? (A321) (level 2)",options:["A. Center and wing tank pumps","B. Center tank XFR valves","C. Wing tank pumps only"],answer:1},
+{chapter:"ATA 28",q:"44. During refueling, the wing tank is filled in the following order: (A320) (level 3)",options:["A. The Outer cell first, then the Inner cell","B. The Outer cell and Inner cell at the same time","C. The Inner cell first, then the Outer cell"],answer:0},
+{chapter:"ATA 28",q:"45. The center tank is vented into: (level 1)",options:["A. The left vent surge tank.","B. The right vent surge tank.","C. The left wing tank"],answer:0},
+{chapter:"ATA 28",q:"46. Refuel valves may be controlled: (level 1)",options:["A. Electrically only","B. Manually only","C. Electrically or manually"],answer:2},
+{chapter:"ATA 28",q:"47. The END light in the refuel/defuel panel illuminate, means? (level 3)",options:["A. Pre-selected fuel is equal to actual fuel.","B. All fuel tanks are full, refuel process stopped automatically.","C. Any high level sensor detected fuel."],answer:0},
+{chapter:"ATA 28",q:"48. What happens when low level is detected in the inner cell? (A320) (level 3)",options:["A. Inner cell transfer valves open.","B. Inner cell transfer valves close to isolate the inner cells","C. Pumps restart to suck fuel from outer cells."],answer:0},
+{chapter:"ATA 28",q:"49. CENTER TANK XFR VALVES ARE USE TO: (A321) (level 2)",options:["A. Transfer fuel from center tank to wing tanks through the jet pumps.","B. Transfer fuel from center tank to the engines through the jet pumps.","C. Transfer fuel from center tank to the APU feed line"],answer:0},
+{chapter:"ATA 28",q:"50. IN NORMAL OPERATION, EACH ENGINE IS SUPPLIED BY: (A321) (level 3)",options:["A. One wing tank and/ or one center tank pump","B. Two wing tanks and/ or two center tank pumps","C. Two wing tanks"],answer:2},
+{chapter:"ATA 28",q:"51. ARE MAIN PUMPS RUNNING WHILE CENTER TANK IS TRANSFERRING? (A321) (level 2)",options:["A. Yes, main pumps are always running.","B. No, only when center tank is empty.","C. No, because of center tank pump priority."],answer:0},
+{chapter:"ATA 28",q:"52. During normal operations when should the fuel intercell transfer valves open (A320)? (level 2)",options:["A. When a low level is sensed in the center tank.","B. When a low level is sensed in either outer wing cell.","C. When low level is sensed in either inner wing cell."],answer:2},
+{chapter:"ATA 28",q:"53. What is the function of the sequence valves? (A320) (level 2)",options:["A. Give priority to wing tank pumps supply.","B. Give priority to refuel the wing tank before the center tank.","C. Give priority to center tank pump supply by limiting wing tank pumps output pressure."],answer:2},
+{chapter:"ATA 28",q:"54. In flight, slats are extended, with fuel in the center tank, Auto mode is selected (A320): (level 2)",options:["A. Center tank pumps start.","B. Center tank pumps stop.","C. Center tank pumps start to transfer fuel to the wing tanks."],answer:1},
+{chapter:"ATA 28",q:"55. The function of the pressure holding valve is: (level 3)",options:["A. To prevent fuel boiling.","B. To avoid fuel overpressure","C. To prevent fuel returns to the engine"],answer:0},
+{chapter:"ATA 28",q:"56. The Fuel used indication on ECAM is reset: (level 1)",options:["A. At engine start","B. At engine shut down","C. At aircraft power up."],answer:0},
+{chapter:"ATA 28",q:"57. The fuel level sensing control units (FLSCUs): (level 1)",options:["A. Monitor the fuel probes.","B. Monitor all the level sensors and temperature sensors.","C. Control the wing tank pumps in Auto mode."],answer:1},
+{chapter:"ATA 28",q:"58. When a high level sensor is immersed in fuel: (level 3)",options:["A. The related refuel valve automatically closes","B. The related refuel valve opens","C. You should manually close the related refuel valve"],answer:0},
+{chapter:"ATA 28",q:"59. From the Engine, recirculated fuel returns to: (level 3)",options:["A. Wing tank","B. Center tank","C. Dry tank"],answer:0},
+{chapter:"ATA 28",q:"60. FADEC close the fuel return valve (Level 3)",options:["A. With a signal from the FLSCU.","B. If the IDG oil is too hot","C. With an outer cell overfilling"],answer:0},
+{chapter:"ATA 28",q:"61. IF slats extaend, with fuel in the center tank, all pumps are running, center tank pumps are on “AUTO” mode? (Level 2)",options:["A. Center tank pumps stop.","B. Center tank pumps start","C. Wing tank pumps start"],answer:0},
+{chapter:"ATA 28",q:"62. If a high level is detected?(Level 1)",options:["A. A warning is triggered: too much fuel","B. The corresponding REFUEL valve closes.","C. All the refueling operating is stopped"],answer:1},
+{chapter:"ATA 28",q:"63. If the center tank is empty, in auto mode, center tank pumps: (Level 1)",options:["A. Must be manually switched OFF","B. Stop and wing tank pumps start running","C. Stop automatically."],answer:2},
+{chapter:"ATA 28",q:"64. Re-circulated fuel (A320) returns to:(Level 1)",options:["A. Inner cells","B. Outer cells.","C. Center tanks"],answer:1},
+{chapter:"ATA 28",q:"65. Which tank are the main supply tanks (A320)?(Level 1)",options:["A. Center tank and Inner cells","B. Outer cells.","C. Center tanks"],answer:0},
+{chapter:"ATA 28",q:"66. When center tank is empty, in AUTO mode, the center tank tranfer valve: (Level 3)",options:["A. Must be manual OFF after 5mn","B. Close automatically after a time delay of 5 mn.","C. Stop automatically and wing pump start"],answer:1},
+{chapter:"ATA 28",q:"67. IDG SHUT OFF sensor use for:(Level 2)",options:["A. Stop the cooling fuel recirculation.","B. Stop the center tank transfer valve","C. Restart cooling fuel recirculation"],answer:0},
+{chapter:"ATA 28",q:"68. The vent float valves:(Level 2)",options:["A. Prevent fuel entering the vent line.","B. Allow fuel drain from vent line","C. Maintain the fuel tanks pressurized"],answer:0},
+{chapter:"ATA 28",q:"69. In which tank are temperature sensor fitted?(Level 1)",options:["A. Inner cells","B. Wing tanks.","C. Center tanks"],answer:1},
+{chapter:"ATA 28",q:"70. Are main pump running while center tank is transfering?(Level 2)",options:["A. Yes, main pumps are alway running.","B. No","C. No, because CTR tank pump is priority"],answer:0},
+{chapter:"ATA 28",q:"71. Fuel drain valve used to:(Level 2)",options:["A. Decrease fuel flow in R/D gallery","B. Avoid a reverse flow to R/D gallery","C. Drain remaining fuel from R/D gallery."],answer:2},
+{chapter:"ATA 28",q:"72. Refuel/defuel electrical circuit are enable by:(Level 3)",options:["A. Aircraft electrical network only","B. Contact of the panel door position relay.","C. Carry out HI LVL test"],answer:1},
+{chapter:"ATA 28",q:"73. Refuel valve normally open by:(Level 3)",options:["A. Energization of a solenoid and application of fuel pressure.","B. Only pressing in the manual command p/b","C. Only by open refuel panel"],answer:0},
+{chapter:"ATA 28",q:"74. Refuel valve may be actuated:(Level 2)",options:["A. Electrically","B. Electrically and manually.","C. Manually"],answer:1},
+{chapter:"ATA 28",q:"75. A320 inner cell is refuelled only when:(Level 1)",options:["A. Center tank is full","B. Outer cells is full.","C. Center tanks is empty"],answer:1},
+{chapter:"ATA 28",q:"76. How many motor in APU LP valve:(Level 3)",options:["A. One DC motor","B. Two DC motor.","C. Two: 1 DC motor, 1 AC motor"],answer:1},
+{chapter:"ATA 28",q:"77. Apu fuel pump pressure switch use to:(Level 3)",options:["A. Signal any low pressure to ECAM","B. Control the APU pump operation.","C. Shut of APU LP valve in case of fire"],answer:1},
+{chapter:"ATA 28",q:"78. On ground, engine off, how to close fuel LP valve?(Level 3)",options:["A. By disconnect Aircraft electrical power","B. By ENGNE FIRE p/b release","C. The valve is ready closed."],answer:2},
+{chapter:"ATA 28",q:"79. In normal condition, which tank will be emptied first?(Level 1)",options:["A. Inner cell","B. Center tank.","C. Outter cell"],answer:1},
+{chapter:"ATA 28",q:"80. The APU can normally be supplied with fuel by:(Level 3)",options:["A. Apu pump only.","B. LH main pumps only.","C. Both APU pump and LH main pump."],answer:2},
+{chapter:"ATA 28",q:"81. Fuel Quatity Indicating system comprise:(Level 2)",options:["A. 1 FQIC and 1 FLSCU","B. 2 FQICs and 1 FLSCU","C. 1 FQIC and 2 FLSCUs."],answer:2},
+{chapter:"ATA 28",q:"82. FRTT valve closes if: (Level 2)",options:["A. Fuel temperature in the wing tank is low","B. Fuel under-full level is sensed","C. Vent surge tank overflow is sensed"],answer:2},
+{chapter:"ATA 28",q:"83. When will the wing tank pumps supply the fuel to the engine? (Level 2)",options:["A. until approximately 500 kg of fuel are used and the UNDERFULL sensor is reached.","B. until approximately 500 kg of fuel are used.","C. Until the UNDERFULL sensor is reached."],answer:0},
+{chapter:"ATA 28",q:"84. How does the FRTT close when the fuel temperature is too high in the outer cell? (Level 2)",options:["A. the EEC closes the FRTT.","B. the FLSCU closes the FRTT.","C. the FLSCU sends a closure signal directly to the EEC to close the FRTT."],answer:0},
+  
+{chapter:"ATA 29",q:"1. Fire shut-off valve are installed for: (level 1)",options:["A. Blue system and Green system.","B. Yellow system and Blue system.","C. Green system and Yellow system."],answer:2},
+{chapter:"ATA 29",q:"5. When is engine fire Shut Off valve of a hydraulic system closed? (level 1)",options:["A. Automatically when the engine is shut down","B. If the ENGINE FIRE pushbutton is released out.","C. Automatically as soon as engine fire is detected"],answer:1},
+{chapter:"ATA 29",q:"7. Regarding hydraulic system, which statement is NOT correct? (level 2)",options:["A. It is not possible to pressurize each main system with one or more of the auxiliary systems without main pumps.","B. Blue electric pump operates when any one of the two engines starts","C. In the normal configuration, three main systems automatically supply hydraulic power when the engines operate."],answer:0},
+{chapter:"ATA 29",q:"8. The Ram Air Turbine (RAT) is deployed if: (level 1)",options:["A. By using the guarded P/B.","B. All AC electrical power sources are lost at speeds greater than 100 kts, or manually by using the guarded P/Bs.","C. All hydraulic power sources are lost at speeds greater than 100 kts, or manually by using the guarded P/Bs."],answer:0},
+{chapter:"ATA 29",q:"9. When you push the fire panels: (level 1)",options:["A. The green fire valve closes.","B. The green fire valve and the yellow fire valve closes.","C. The green fire valve, the yellow fire valve and blue fire valve closes."],answer:1},
+{chapter:"ATA 29",q:"10. A reservoir quantity indicator allows refilling monitoring. It shows the contents of the selected hydraulic reservoir that is indicated by: (level 2)",options:["A. the three colored lights.","B. one of the three colored light.","C. one of the three colored lights."],answer:2},
+{chapter:"ATA 29",q:"11. If there is no electrical power available: (level 1)",options:["A. the fluid level can be checked by push BAT ON.","B. the fluid level can be checked on the reservoir itself.","C. the fluid level can’t be checked."],answer:1},
+{chapter:"ATA 29",q:"12. When the PTU operation is inhibited? (level 2)",options:["A. In case of cargo door operations with the yellow electric pump or first engine start.","B. Only if an engine failure has been detected.","C. Never, it cannot be inhibited."],answer:0},
+{chapter:"ATA 29",q:"13. What are the manual depressurization valves provided for? (level 1)",options:["A. Depressurization of related hydraulic circuit","B. Hydraulic system depressurization","C. None of above"],answer:2},
+{chapter:"ATA 29",q:"14. With both engines stop, is it possible to pressurized only Green system for maintenance (level 1)",options:["A. Yes, with yellow electric pump and the PTU","B. Yes, with blue electric pump and the PTU","C. None of above"],answer:2},
+{chapter:"ATA 29",q:"15. The hydraulic PTU will activate if: (level 1)",options:["A. A significant pressure loss (500 Psi) occurs in any of the three hydraulic systems.","B. A significant pressure loss (500 Psi) occurs in the Green or Yellow hydraulic system.","C. Both are correct."],answer:1},
+{chapter:"ATA 29",q:"16. After extending the RAT, is it possible to check its position and status? (level 2)",options:["A. Yes, select the ECAM ELEC page.","B. Yes, select the ECAM HYD page.","C. No. It is not possible."],answer:1},
+{chapter:"ATA 29",q:"17. When will normal operation of the Blue system hydraulic pump begin? (level 1)",options:["A. During the first engine start.","B. When the first engine MASTER switch is moved to the ON position.","C. After both engines are started."],answer:0},
+{chapter:"ATA 29",q:"18. For hydraulic system malfunctions, when will the RAT deploy? (level 2)",options:["A. Automatically with the failure of both the Green and Blue hydraulic systems.","B. Automatically with the failure of both the Green and Yellow hydraulic systems.","C. When the guarded RAT MAN ON push button is selected by the crew."],answer:2},
+{chapter:"ATA 29",q:"19. During A/C push back , only one engine running : (level 2)",options:["A. the PTU operation is operative","B. the PTU operation is inhibited","C. the PTU operation is depending on PTU p/b switch"],answer:1},
+{chapter:"ATA 29",q:"20. For normal supply, all three reservoirs are pressurized from: (level 1)",options:["A. Engine 1.","B. Engine 2.","C. APU."],answer:0},
+{chapter:"ATA 29",q:"21. The green reservoir is located in: (level 1)",options:["A. The main landing gear bay","B. The nose landing gear bay","C. The green hydraulic compartment"],answer:0},
+{chapter:"ATA 29",q:"22. All the reservoirs are filled from: (level 2)",options:["A. The green ground service panel","B. Separated service panel","C. The blue ground service panel"],answer:0},
+{chapter:"ATA 29",q:"23. Rat is retracted by: (level 1)",options:["A. spring force.","B. solenoid operation.","C. blue hydraulic pressure."],answer:2},
+{chapter:"ATA 29",q:"24. Filling hydraulic with fluid : (level 1)",options:["A. to the middle of the scale.","B. to the upper end of the scale.","C. to the special value of (blue, green, yellow) hydraulic system."],answer:1},
+{chapter:"ATA 29",q:"25. A hand pump is provided in: (level 1)",options:["A. The yellow system for landing gear door manual operation.","B. The yellow system for cargo door manual operation.","C. The yellow system for PTU operation."],answer:1},
+{chapter:"ATA 29",q:"26. The identification of the pipe as a hydraulic pipe, its function with: (level 2)",options:["A. Black round, the direction of the fluid flow and a color code.","B. Black dots, the direction of the fluid flow and a color code.","C. Black round, the direction of the fluid flow and a black code."],answer:1},
+{chapter:"ATA 29",q:"27. Which is the first priority of the pressure source for reservoir pressurization: (level 1)",options:["A. The engine 1 HP compressor.","B. The engine 2 HP compressor.","C. The pneumatic system or ground supply."],answer:0},
+{chapter:"ATA 29",q:"28. On the blue hydraulic system, the Constant Speed Motor/Generator (CSM/G) is used: (level 2)",options:["A. To provide A/C electrical power in case of emergency.","B. To provide hydraulic power in case of emergency.","C. Both A & B"],answer:0},
+{chapter:"ATA 29",q:"29. An identification of a hydraulic system comprising: (level 2)",options:["A. A number 1, 2 or 3 respectively indicating the Yellow, Blue, or Green system.","B. A number 1, 2 or 3 respectively indicating the Blue, Green, or Yellow system.","C. A number 1, 2 or 3 respectively indicating the Green, Blue, or Yellow system."],answer:2},
+{chapter:"ATA 29",q:"30. The RAT retraction done: (level 1)",options:["A. On GND by green hydraulic pressure.","B. On GND by blue hydraulic pressure","C. On GND or in the air by blue hydraulic pressure."],answer:1},
+{chapter:"ATA 29",q:"31. Where can you check the hydraulic quantity: (level 1)",options:["A. On ECAM and Green service panel.","B. On ECAM and reservoirs.","C. A & B"],answer:2},
+{chapter:"ATA 29",q:"32. The yellow electric pump runs: (level 1)",options:["A. If the ELEC PUMP pushbutton is set to ON","B. If the cargo door selector is activated.","C. A or B."],answer:2},
+{chapter:"ATA 29",q:"33. A bidirectional Power Transfer Unit (PTU) enables: (level 2)",options:["A. The green hydraulic fluid to flow into the yellow system","B. The green and yellow hydraulic fluid to power both systems","C. The green system powered by the yellow system or vice versa, without fluid transfer."],answer:2},
+{chapter:"ATA 29",q:"34. A Ram Air Turbine (RAT) is provided in: (level 2)",options:["A. The blue system for emergency use.","B. The green system for emergency use.","C. The yellow system for emergency use."],answer:0},
+{chapter:"ATA 29",q:"35. A fire shut-off valve is positioned: (level 2)",options:["A. Downstream of the engine driven pump","B. Upstream of the engine driven pump","C. On the engine driven pump"],answer:1},
+{chapter:"ATA 29",q:"36. In flight, if the blue electric pump fails the blue system: (level 1)",options:["A. Is lost.","B. Can be recovered by the RAT.","C. Can be recovered by the PTU."],answer:1},
+{chapter:"ATA 29",q:"37. During first engine start the PTU is: (level 2)",options:["A. Automatically running.","B. Tested.","C. None of above."],answer:2},
+{chapter:"ATA 29",q:"38. How can the LH wing be supplied independently during the leak measurement test? (level 1)",options:["A. By setting the leak measurement valve to OFF.","B. By using the LH wing spool valve.","C. Both A and B"],answer:2},
+{chapter:"ATA 29",q:"39. Is it possible to extend the Ram Air Turbine in flight? (level 2)",options:["A. Yes, if blue pressure is available.","B. Yes, but for automatically extend only.","C. None of above"],answer:2},
+{chapter:"ATA 29",q:"40. The leak measurement valves are used for? (level 1)",options:["A. Stop the leak of hydraulic to minimize the risk of fire.","B. Stop movement of the high lift devices during maintenance.","C. None of the above."],answer:2},
+{chapter:"ATA 29",q:"41. With the aircraft on the ground and the blue electric pump switch in auto; the blue pump will be energized when: (level 2)",options:["A. One engine is running.","B. The BLUE PUMP OVRD switch has been pressed.","C. First two statements are correct."],answer:2},
+{chapter:"ATA 29",q:"42. The aircraft's three hydraulic systems are normally pressurized by: (level 2)",options:["A. Two engine driven pumps and one electric pump.","B. Two electric pumps and one PTU.","C. Two electric pumps and two engine driven pumps."],answer:0},
+{chapter:"ATA 29",q:"43. When will the yellow system electric pump operate? (AC power is available). (level 2)",options:["A. During the engine #2 start.","B. When the first engine MASTER switch is moved to the ON position.","C. When the yellow electric system ELEC PUMP push button is selected to ON or the ground crew activates a cargo door switch."],answer:2},
+{chapter:"ATA 29",q:"44. What is the nominal system pressure? (level 1)",options:["A. 1000 PSI","B. 2000 PSI","C. 3000 PSI"],answer:2},
+{chapter:"ATA 29",q:"45. Each hyd. Fluid’s ‘ OVHT ’ status is monitored by sensor installed in: (level 2)",options:["A. Suction line","B. High pressure line","C. Return line"],answer:2},
+{chapter:"ATA 29",q:"46. The EDP in the de-pressurized mode: (level 2)",options:["A. Does not operate","B. Still operates and supplies reduced pressure to the system","C. Still operates and does not supply pressure to the system"],answer:2},
+{chapter:"ATA 29",q:"47. Is it possible to pressurize only Green system for maintenance with both engines stop and no usage of hydraulic ground cart? (level 2)",options:["A. Yes, with yellow electric pump and the PTU.","B. Yes, with blue electric pump and the PTU.","C. No"],answer:2},
+{chapter:"ATA 29",q:"48. With the BLUE ELEC PUMP pushbutton set to AUTO (level 2)",options:["A. The electric pump operates at first engine start.","B. The pump is de-energized.","C. The pump operates in case of both EDP failure."],answer:0},
+{chapter:"ATA 29",q:"49. The RAT is automatically extended in case of: (Level 3)",options:["A. Loss of AC bus1 and bus2 and speed above 100 Knots.","B. Blue hydraulic pump failure","C. Can only be extended manually."],answer:0},
+{chapter:"ATA 29",q:"50. During second engine start the PTU is: (Level 3)",options:["A. Automatically running.","B. Tested.","C. Inhibited."],answer:1},
+{chapter:"ATA 29",q:"51. To which system(s) will the Ram Air Turbine provide hydraulic power? (Level 3)",options:["A. The blue system","B. The yellow system","C. The green and yellow systems"],answer:0},
+{chapter:"ATA 29",q:"52. What will happen when the Yellow electric pump P/B is set to 'ON', with aircraft on ground, electrical power available, PTU selected to 'AUTO' and engines not running? (Level 3)",options:["A. The green and yellow systems are pressurized","B. The green and blue systems are pressurized","C. Only the yellow system is pressurized"],answer:0},
+{chapter:"ATA 29",q:"53. A Blue system pipeline is identified by: (Level 2)",options:["A. A blue band and number 1.","B. A blue band and number 2.","C. A blue band and number 3."],answer:1},
+{chapter:"ATA 29",q:"54. How can the LH wing be supplied independently during the leak measurement test? (Level 3)",options:["A. By setting the leak measurement valve to OFF and operating the electric pump.","B. By pressurizing the yellow system by using the PTU.","C. By setting the leak measurement valve to OFF and manually open the LH wing spool valve"],answer:2},
+{chapter:"ATA 29",q:"55. Which is the correct statement: (Level 3)",options:["A. In the yellow hydraulic system, the electrical pump operates automatically when one engine is operating","B. In the yellow system, the electrical pump operates automatically when A/C is in flight configuration","C. In the yellow system, the electrical pump is manually controlled or automatically operates"],answer:2},
+{chapter:"ATA 29",q:"56. In flight, in normal condition, which is the correct statement for the PTU : (Level 3)",options:["A. In stand-by","B. Working continuously","C. Working continuously and there is no transfer of hydraulic fluid from one system to the other"],answer:0},
+{chapter:"ATA 29",q:"57. What happens if hydraulic pressure drops? (Level 3)",options:["A. The priority valves give priority to the heavy loads users.","B. The priority valves give priority to the essential systems","C. The priority valves modulate the pressure to the users"],answer:1},
+{chapter:"ATA 29",q:"58. When is the engine fire shut off valve closed? (Level 3)",options:["A. When the engine is shut down","B. Automatically as soon as an engine fire is detected.","C. If the engine fire pushbutton is release out."],answer:2},
+{chapter:"ATA 29",q:"59. What can the hand pump be used for? (Level 3)",options:["A. To pressurized the reservoir.","B. To check the flight controls","C. To operate the cargo doors"],answer:2},
+{chapter:"ATA 29",q:"60. What are the manual depressurization valves provided for? (Level 3)",options:["A. Individual reservoir depressurization","B. Depressurization of related hydraulic circuit","C. Hydraulic system depressurization"],answer:0},
+{chapter:"ATA 29",q:"61. The Green system is powered by: (Level 2)",options:["A. Engine driven pump (EDP)","B. Yellow system via PTU","C. A and B"],answer:2},
+{chapter:"ATA 29",q:"62. Hydraulic reservoir is normally pressurized by: (Level 3)",options:["A. Bleed air from ENG 1","B. Bleed air from Pneumatic system","C. By ground card only"],answer:0},
+{chapter:"ATA 29",q:"63. Where can we do maintenance with RAT: (Level 3)",options:["A. At Green service panel","B. At Blue service panel","C. At Yellow service panel"],answer:1},
+{chapter:"ATA 29",q:"64. What is the purpose of the leak management valves: (Level 3)",options:["A. To isolate the hydraulically heavy load users in order to maintain normal supply to essential users","B. To isolate the primary controls","C. To collect leak from seal drains of some hydraulic components"],answer:1},
+{chapter:"ATA 29",q:"65. When is the engine driven pump in the depressurized mode? (Level 3)",options:["A. When the ENG PUMP pushbutton is set to OFF","B. The engine pump can not be depressurized as long as the engine is running","C. The engine pump is automatically depressurized if the output pressure drops below 1450psi"],answer:0},
+{chapter:"ATA 29",q:"66. What happens if hydraulic pressure drops? (Level 3)",options:["A. The priority valves cut off power to the heavy loads users.","B. The priority valves give priority to the essential systems","C. Both A and B"],answer:2},
+{chapter:"ATA 29",q:"67. Is it possible to extend the Ram Air Turbine in flight? (Level 3)",options:["A. Yes, event the blue system pressure is available.","B. Yes, but for automatically extend only.","C. Yes, Only speed under 100 knots."],answer:0},
+{chapter:"ATA 29",q:"68. Which hydraulic systems are pressurized by an EDP? (Level 1)",options:["A. Yellow and green.","B. Blue and green","C. Yellow and blue"],answer:0},
+{chapter:"ATA 29",q:"69. In normal operation, what is the blue hydraulic system pressurized by? (Level 1)",options:["A. PTU","B. The electric pump.","C. EDP"],answer:1},
+{chapter:"ATA 29",q:"70. Is it possible to stow the RAT in flight:(Level 2)",options:["A. No.","B. Yes","C. Yes, with aircraft speed more than 100kts"],answer:0},
+{chapter:"ATA 29",q:"71. What happens when the filter of the filling citcuit is clogged? (Level 3)",options:["A. Fluid bypasses the filter element","B. Fluid is stopped, filling is impossible.","C. The filling pressure has to be increased"],answer:1},
+{chapter:"ATA 29",q:"72. What is the main funtion of the restrictor: (Level 3)",options:["A. To protect the system against overpressure.","B. To limit the pressure of the hand pump","C. To limit thermal expansion of the hydraulics fluid"],answer:0},
+{chapter:"ATA 29",q:"73. Do the hydraulic reservoir have to be depressurized to refill with hydraulic fluid?:(Level 2)",options:["A. No.","B. Yes","C. No, with special filling tool"],answer:0},
+{chapter:"ATA 29",q:"74. Each hydraclic system “OVHT” status is monitored by sensor installed in: (Level 3)",options:["A. Suction line","B. High pressure line","C. Return line"],answer:2},
+{chapter:"ATA 29",q:"75. Which component(s) send a Warning and Fault signals on the blue hydraulic system? (Level 3)",options:["A. Only the low air pressure switch","B. The high level detector","C. Overheat sensor, low air pressure switch and low level detector"],answer:2},
+{chapter:"ATA 29",q:"76. In flight, the blue hydraulic system can be supplied by: (Level 3)",options:["A. The RAT and the electrical pump.","B. The engine driven pump.","C. The PTU (Power Transfer Unit)."],answer:0},
+{chapter:"ATA 29",q:"77. What happens if the hydraulic pressure drops, in the Yellow hydraulic systems? (Level 3)",options:["A. The priority valve close automatically, cuts the pressure to the primary flight controls, in order to supply the flaps","B. The priority valve opens, and supply only the primary flight controls","C. The priority valve closes cut off hydraulic power to the flaps, in order to supply the other users"],answer:2},
+{chapter:"ATA 29",q:"78. Where is the hydraulic system temperature sensor located? (Level 3)",options:["A. In the reservoir","B. On the return manifold","C. On the HP. filter"],answer:1},
+{chapter:"ATA 29",q:"79. What happens if the hydraulic pressure drops, in the Yellow system? (Level 3)",options:["A. The priority valve closes automatically, cuts the pressure to the primary flight controls, in order to supply the flaps","B. The priority valve opens, and supply only the primary flight controls","C. The priority valve closes to cut off hydraulic power to the flaps, in order to supply the other users"],answer:2},
+{chapter:"ATA 29",q:"80. During which operation is the leak measurement valve closed automatically (Level 3)",options:["A. PTU operation.","B. Cargo door operation.","C. Hand pump operation."],answer:1},
+{chapter:"ATA 29",q:"81. The threshold of the hydralic pressure relief valve is: (level 1)",options:["A. 237 bar","B. 245 bar","0"],answer:0},
+
+{chapter:"ATA 32",q:"1. Which is the primary indication for landing gear system (level 1)",options:["A. The landing gear indicator panel.","B. On the ECAM.","C. Data from both LGCIUs."],answer:1},
+{chapter:"ATA 32",q:"2. To continue the sequence to retract the landing gear, the LGCIU needs ( level 1)",options:["A. A signal the doors fully open position from the doors proximity detectors.","B. A signal the gears fully open position from the gears proximity detectors.","C. A signal from the doors proximity detectors."],answer:0},
+{chapter:"ATA 32",q:"3. When a Landing Gear Control and Interface Unit (LGCIU) detects any shock absorber not extended: ( level 1)",options:["A. The control lever is locked in the 'DOWN' position.","B. The control lever is locked in the 'DOWN' position by hydraulic.","C. The control lever is locked in any position."],answer:0},
+{chapter:"ATA 32",q:"4. What are main braking modes: (level 2)",options:["A. Auto brake, alternate brake and parking brake","B. Normal brake, alternate brake, in FLT brake and parking brake","C. Normal and alternate brake and in FLT brake"],answer:1},
+{chapter:"ATA 32",q:"5. Which is supplied to the computer for braking and anti-skid computation: (level 2)",options:["A. Wheels rotation speed.","B. Air data.","C. Wheels rotation speed and ADIRU data"],answer:2},
+{chapter:"ATA 32",q:"6. Which send the digital signals of temperature to ECAM display unit: (level 2)",options:["A. The Brake Temperature Monitoring Unit (BTMU).","B. The Braking and Steering Control Unit (BSCU).","C. The Landing Gear Control and Interface Unit (LGCIU)."],answer:1},
+{chapter:"ATA 32",q:"7. In enhance system, what controls the antiskid function: (level 1)",options:["A. BSCU via ABCU","B. ABCU via BSCU","C. BSCU"],answer:0},
+{chapter:"ATA 32",q:"8. Does the steering system remains when the gear extend by gravity: (level 1)",options:["A. No if a/c equips enhance system","B. Yes if a/c equips classic system","C. Yes if a/c equips enhance system"],answer:2},
+{chapter:"ATA 32",q:"9. The nose wheel steering classic system is: ( level 1)",options:["A. Electrically controlled and powered by the green hydraulic system.","B. Electrically controlled and powered by the yellow hydraulic system.","C. Electrically controlled and powered may be by mechanical system."],answer:0},
+{chapter:"ATA 32",q:"10. On the LANDING GEAR PANEL a green triangle light indicates: (level 1)",options:["A. The related gear is not locked down.","B. The related door gear is locked down.","C. The related gear is locked down."],answer:2},
+{chapter:"ATA 32",q:"11. When the parking brake handle is pulled and turned to the 'ON' position: (level 2)",options:["A. The yellow pressure is immediately applied to the brakes.","B. The yellow pressure is applied to the brakes after 5 minutes.","C. The parking pressure only applied when the yellow pressure is available."],answer:2},
+{chapter:"ATA 32",q:"12. Can you retract the landing gear when aircraft on ground: ( level 1)",options:["A. No, an interlock mechanism prevents when any shock absorber is not extended.","B. Yes, when any shock absorber is not extended.","C. A and B"],answer:0},
+{chapter:"ATA 32",q:"13. Which cuts landing gear hydraulic supply in free fall extension: ( level 1)",options:["A. The safety valve.","B. The cut-out valve.","C. The supply valve."],answer:1},
+{chapter:"ATA 32",q:"14. Rotation of the free fall extension handle closes the cut out valve and: (level 1)",options:["A. Open two vent valve to let hydraulic back to the return line.","B. Releases door and gear uplocks.","C. A & B."],answer:2},
+{chapter:"ATA 32",q:"15. What is the normal retraction sequence? (level 2)",options:["A. Door open, gear up, door close, cancel gear up signal.","B. Door open, gear up, door close, maintain gear up signal.","C. Door open, gear up, door close, cancel door close signal."],answer:0},
+{chapter:"ATA 32",q:"16. How is inflight braking initiated? ( level 1)",options:["A. By setting the landing lever to the UP position.","B. By shock absorber extension.","C. By auto brake deactivation."],answer:0},
+{chapter:"ATA 32",q:"17. When does the UNLK light come on? (level 1)",options:["A. When the gear and the related doors are not locked up.","B. When the gear is not locked down.","C. None of above"],answer:2},
+{chapter:"ATA 32",q:"18. When does the BSCU provide anti-skid control? (level 1)",options:["A. During Alternate braking.","B. During normal braking.","C. Both of above"],answer:2},
+{chapter:"ATA 32",q:"19. What is the purpose of the hydraulic fuses? ( level 1)",options:["A. Only use during Maintenance","B. To shut off the return lines","C. None of above"],answer:2},
+{chapter:"ATA 32",q:"20. Which hydraulic system powers normal braking? (level 1)",options:["A. Blue for classic system.","B. Yellow for enhance system.","C. None of the above"],answer:2},
+{chapter:"ATA 32",q:"21. What are the auto brake arming condition? ( level 3)",options:["A. An AUTO BRK pushbutton pressed in, green pressure and anti-skid powered and no failure in normal braking system.","B. An AUTO BRK pushbutton pressed in, yellow pressure and anti-skid powered and no failure in normal braking system.","C. An AUTO BRK pushbutton pressed in, green pressure and anti-skid deactivated and no failure in normal braking system."],answer:0},
+{chapter:"ATA 32",q:"22. When does the automatic changeover of the LGCIUs in control occur? ( level 3)",options:["A. When 'UP' is selected.","B. When a LGCIU failure","C. Both of above"],answer:2},
+{chapter:"ATA 32",q:"23. Before the landing gear can be retracted, what must the LGCIU detect? (level 3)",options:["A. Three shock absorbers compressed.","B. Three shock absorbers extended.","C. Main shock absorbers extended."],answer:1},
+{chapter:"ATA 32",q:"24. Can you operate the 'nose wheel steering' during take off and landing when the speed above 130 kts? ( level 3)",options:["A. It is not possible","B. It is possible through rudder pedals","C. It is possible through hand wheels"],answer:0},
+{chapter:"ATA 32",q:"25. When is the anti-skid function inhibited by the BSCU? ( level 3)",options:["A. During alternate braking.","B. When the auto brake system has failed.","C. During in flight braking"],answer:2},
+{chapter:"ATA 32",q:"26. Which component gives priority to the green hydraulic system during classic system? ( level 2)",options:["A. Brake selector valve.","B. Normal brake selector valve","C. None of the above"],answer:2},
+{chapter:"ATA 32",q:"27. There are two triangles for each gear on the ECAM WHEEL page. What do they represent? ( level 3)",options:["A. Each triangle represents one wheel on the gear.","B. Each triangle represents the position detected by one of the two LGCIUs.","C. Each triangle represents one of the braking systems available for that gear."],answer:1},
+{chapter:"ATA 32",q:"28. What does each turn of the gravity gear extension handle do? ( level 3)",options:["A. Open gear doors, unlock gear, drop gear.","B. Shutoff hydraulic pressure, open doors, unlock gear.","C. Open gear doors, shutoffs hydraulics, unlock gear, drop gear."],answer:1},
+{chapter:"ATA 32",q:"29. For A320 when the landing gear is gravity extended, will nose wheel steering be available? ( level 3)",options:["A. Yes, if the A/SKID & N/W STRG switch is selected ON.","B. No.","C. Limited nose wheel steering is available only through the captain's rudder pedals."],answer:1},
+{chapter:"ATA 32",q:"30. What happens to the other brake modes when parking brakes are applied (classical version)? ( level 3)",options:["A. There is no change.","B. All other braking modes and anti-skid are deactivated.","C. Antiskid mode only is deactivated."],answer:1},
+{chapter:"ATA 32",q:"31. What computer controls the Anti-Skid function on the classical and enhanced aircraft? (level 2)",options:["A. Either LGCIU in turn.","B. ABCU.","C. BSCU."],answer:2},
+{chapter:"ATA 32",q:"32. If the brake system automatically transitions to alternate brakes with the A/Skid & N/W strg switch in the ON position, which of the following will be available? (level 2)",options:["A. Only auto brakes.","B. Brakes, auto brakes, anti-skid.","C. Anti-skid."],answer:2},
+{chapter:"ATA 32",q:"33. The function of the MLG’s torque links damper is: (level 1)",options:["A. To damp side load to the shock absorber.","B. To increase the landing gear steering angle.","C. To damp the landing vertical load."],answer:0},
+{chapter:"ATA 32",q:"34. The BRK fan pushbutton can be used to operate the fans: (level 1)",options:["A. To cool all the brakes at same time.","B. To cool the highest temperature brake only.","C. To cool 2 brakes on one gear that has highest temperature brake."],answer:0},
+{chapter:"ATA 32",q:"35. LGCIU system 1 and 2 changeover occurs when: (level 1)",options:["A. Setting the landing gear control lever to DOWN.","B. Setting the landing gear control lever to UP.","C. After each flight at engine start."],answer:1},
+{chapter:"ATA 32",q:"36. After take-off, the nose wheels are automatically centered by means of: (level 1)",options:["A. One centering cam.","B. Two steering actuators.","C. Two centering cams."],answer:2},
+{chapter:"ATA 32",q:"37. When does LGCIU turn from standby to active control? (level 1)",options:["A. LGCIU control lever is removed away from DOWN position.","B. LGCIU control lever is removed away from UP position.","C. None above."],answer:0},
+{chapter:"ATA 32",q:"38. What happen if aircraft on ground Landing gear control lever to be moved to UP position? ( level 3)",options:["A. Landing gears do not retract due to installation of safety pin in each landing gear.","B. Landing gear control lever cannot be moved to UP position due to baulk interlock mechanism.","C. All above."],answer:1},
+{chapter:"ATA 32",q:"39. What is the function of the Triple Pressure indicator? ( level 3)",options:["A. Indicates accumulator pressure and L/H + R/H gear parking brake pressure.","B. Indicates accumulator pressure and L/H + R/H gear alternate brake pressure.","C. All above."],answer:2},
+{chapter:"ATA 32",q:"40. What are differences between nose landing gear steering system of Classic and Enhance aircraft? ( level 3)",options:["A. Classic steering system is powered by Yellow hydraulic system.","B. Enhance steering system is powered by Green hydraulic system.","C. After landing gear free fall extension for classic version, nose gear steering system is lost."],answer:2},
+{chapter:"ATA 32",q:"41. Before towing aircraft what safety features must be followed? (level 2)",options:["A. Check message: “NOSE WHEEL STEER DISC” appears on upper ECAM.","B. Check the extension of nose gear shock absorber (dimension H) must be less than 300mm.","C. All above."],answer:2},
+{chapter:"ATA 32",q:"42. How many turns need to be turned the landing gear free fall handle to complete landing gear free fall extension? ( level 3)",options:["A. 1 turn.","B. 2 turns.","C. 3 turns."],answer:2},
+{chapter:"ATA 32",q:"43. What is the function of the torque links mechanism of the main landing gear? (level 2)",options:["A. Permit inner cylinder (sliding tube) rotate around outer cylinder (main fitting).","B. Permit inner cylinder (sliding tube) slide up and down inside the outer cylinder (main fitting).","C. All above."],answer:1},
+{chapter:"ATA 32",q:"44. What statement is most correct about the Anti-skid system? ( level 3)",options:["A. If all ADIRU data is not valid, the reference speed is equal to the maximum of either main landing gear wheel speed.","B. If all ADIRU data is not valid, the anti-skid function is lost due to no reference speed.","C. None of above."],answer:0},
+{chapter:"ATA 32",q:"45. What happen if rudder pedal disconnect pushbutton is pressed? (level 1)",options:["A. Deflection rudder order is disconnected.","B. Nose wheel steering is disconnected from pedal.","C. All above."],answer:1},
+{chapter:"ATA 32",q:"46. How to center the nose landing gear during retraction/extension sequence? (level 1)",options:["A. By hydraulic power.","B. By centering cams.","C. All above."],answer:1},
+{chapter:"ATA 32",q:"47. What is the brake accumulator pressure when the yellow system is pressurized to 3000 psi? (level 2)",options:["A. 3000 psi.","B. 1450 psi (accumulator pre-charged pressure).","C. None above."],answer:0},
+{chapter:"ATA 32",q:"48. What happen if temperature of any brake is reached the threshold? ( level 3)",options:["A. Brake Fan pushbutton ON line comes on, the FAN automatically run to cool the brake.","B. Brake Fan pushbutton ON line comes on, the FAN manually turn on to cool the brake.","C. None of above."],answer:1},
+{chapter:"ATA 32",q:"49. Under normal condition, which hydraulic system is used to extend/retract the aircraft landing gears: (level 1)",options:["A. GREEN","B. BLUE","C. YELLOW"],answer:0},
+{chapter:"ATA 32",q:"50. Which computer controls the aircraft landing gear extension/retraction cycles: (level 1)",options:["A. BSCU","B. CFDIU","C. LGCIU"],answer:2},
+{chapter:"ATA 32",q:"51. Which computer controls the aircraft braking and steering system: (level 1)",options:["A. BSCU","B. CFDIU","C. LGCIU"],answer:0},
+{chapter:"ATA 32",q:"52. When will the LGCIU switch over automatically to the another LGCIU to control the landing gear extension/retraction: (level 1)",options:["A. when landing gear control lever is set to down","B. when landing gear control lever is set to up","C. when electrical power is supplied"],answer:1},
+{chapter:"ATA 32",q:"53. Which computer gives the indication on the landing gear indicator panel: ( level 3)",options:["A. LGCIU#1","B. LGCIU#2","C. both LGCIUs"],answer:0},
+{chapter:"ATA 32",q:"54. When is the cut-out valve closed: ( level 3)",options:["A. as soon as the air speed is greater than 260Kts","B. as soon as the control lever is moved to UP","C. during gear gravity extension"],answer:2},
+{chapter:"ATA 32",q:"55. In the classic braking system, how is the alternate braking pressure controlled: (level 2)",options:["A. by the auxiliary low pressure system","B. by ABCU","C. by LGCIU"],answer:0},
+{chapter:"ATA 32",q:"56. In the classic braking system, in case of the normal braking system low pressure, how does the alternate braking system pressure take over: (level 3)",options:["A. as soon as the braking pedals are pressed in","B. by ABCU","C. automatically through the automatic selector"],answer:2},
+{chapter:"ATA 32",q:"57. The anti-skid function is obtained by: (level 1)",options:["A. BSCU","B. ABCU","C. the auxiliary low pressure system"],answer:0},
+{chapter:"ATA 32",q:"58. Which component(s) does the gravity extension crank handle operate: ( level 3)",options:["A. the cut-out and the safety valves","B. the cut-out and the vent valves","C. the safety and the vent valves"],answer:1},
+{chapter:"ATA 32",q:"59. Which computer(s) sends the landing gear position indication to ECAM display ( level 3)",options:["A. LGCIU#1 only","B. either LGCIU in turn","C. both LGCIUs simultaneously"],answer:2},
+{chapter:"ATA 32",q:"60. When will the 'LGCIU' change-over for landing gear control takes place (level 2)",options:["A. When the landing gear control lever is set to down","B. When the landing gear control lever is set to up","C. When electrical power is applied"],answer:1},
+{chapter:"ATA 32",q:"61. What controls the landing gear operating sequence? (level 2)",options:["A. Either LGCIU In turn","B. Both LGCIU's simultaneously","C. Landing gear control lever"],answer:0},
+{chapter:"ATA 32",q:"62. When airborn, NLG will be centered by? (level 1)",options:["A. LGCIU","B. An internal cam.","C. BSCU"],answer:1},
+{chapter:"ATA 32",q:"63. Which hydraulic systems are used for the aircraft braking system: (level 2)",options:["A. GREEN(for the normal braking) and BLUE(for the alternate braking)","B. GREEN(for the normal braking) and YELLOW(for the alternate braking)","C. BLUE(for the normal braking) and YELLOW(for the alternate braking)"],answer:1},
+{chapter:"ATA 32",q:"64. THE GEAR AND DOORS ARE ELECTRICALLY CONTROLLED AND: (level 2)",options:["A. Hydraulically operated by the green or yellow hydraulic system.","B. Hydraulically operated by the green hydraulic system.","C. Hydraulically operated by the blue hydraulic system."],answer:1},
+{chapter:"ATA 32",q:"65. THE TRIPLE INDICATOR DISPLAYS: (level 2)",options:["A. The green pressure and the normal braking pressure delivered to the LH and RH brakes.","B. The green brake accumulator and the normal pressure delivered to the LH and RH brakes.","C. The yellow brake accumulator and the braking pressure delivered to the LH and RH brakes."],answer:2},
+{chapter:"ATA 32",q:"66. WHEN THE PARKING BRAKE HANDLE IS PULLED AND TURNED TO THE 'ON' POSITION: (level 2)",options:["A. The green pressure is applied to the brakes.","B. Only the yellow accumulator pressure is applied to the brakes.","C. The yellow pressure is applied to the brakes."],answer:2},
+{chapter:"ATA 32",q:"67. CAN YOU RETRACT THE LANDING GEAR WHEN AIRCRAFT ON GROUND: (level 2)",options:["A. No, because of an interlock mechanism","B. Yes, when any shock absorber is compressed.","C. A and B"],answer:0},
+{chapter:"ATA 32",q:"68. THE STEERING SYSTEM DEACTIVATION FOR TOWING PURPOSE IS ALLOWED BY: (level 2)",options:["A. A lever on the towing electrical box located on the MLG.","B. B. A lever on the towing electrical box located on the NLG.","C. C. A “towing switch” on the overhead panel ."],answer:1},
+{chapter:"ATA 32",q:"69. THE NOSE WHEEL STEERING SYSTEM IS (Classic Aircraft): (level 2)",options:["A. Green hydraulically powered and electrical controlled by the BSCU.","B. B. Electrically powered and controlled by the BSCU.","C. C. Hydraulically powered and mechanical controlled by the hand wheel."],answer:0},
+{chapter:"ATA 32",q:"70. THE PARKING BRAKE SYSTEM IS HYDRAULICALLY SUPPLIED BY: (level 2)",options:["A. The yellow pressure.","B. B. By an accumulator.","C. C. A or B."],answer:2},
+{chapter:"ATA 32",q:"71. THE GREEN PRESSURE SUPPLIES THE NORMAL BRAKES THROUGH (Classic): (level 2)",options:["A. The automatic selector and normal servo valves.","B. The dual valves and normal servo valves.","C. The main anti-skid valve."],answer:0},
+{chapter:"ATA 32",q:"72. THE NORMAL BRAKE PRESSURE HAS INDICATION: (level 2)",options:["A. Yes, on ECAM.","B. B. Yes, on triple indicator.","C. C. No."],answer:2},
+{chapter:"ATA 32",q:"73. THE PURPOSE OF THE SPARE SEAL ACTIVATING VALVE IS TO: (level 2)",options:["A. Isolate the bottom gland seals if a leak occurs.","B. B. Open the bottom gland seals if a leak occurs.","C. C. Isolate the shock absorber lower chamber."],answer:0},
+{chapter:"ATA 32",q:"74. When will the 'LGCIU' change-over for landing gear control takes place (Level 2)",options:["A. When the landing gear control lever is set to down","B. When the landing gear control lever is set to up","C. When electrical power is applied"],answer:1},
+{chapter:"ATA 32",q:"75. When airborn, NLG will be centered by? (Level 2)",options:["A. LGCIU","B. An internal cam.","C. BSCU"],answer:1},
+{chapter:"ATA 32",q:"76. Before the LDG can be retracted, the LGCIU must detect that : (Level 2)",options:["A. Three shock absorbers are extended","B. Three shock absorbers are compressed","C. Main shock absorbers are extended"],answer:0},
+{chapter:"ATA 32",q:"77. When is the hydraulic circuit depressurized after retraction? (Level 2)",options:["A. As soon as the selector lever is move to neutral.","B. As soon as the airspeed is greater than 260 ± 5 Kts","C. As soon as the last door is closed"],answer:1},
+{chapter:"ATA 32",q:"78. Which system sends the signal to the safety valve to shut off the LDG hydraulic pressure? (Level 2)",options:["A. ADIRU 2 and 3","B. ADIRU 1 and 3","C. ADIRU 1 & 2"],answer:1},
+{chapter:"ATA 32",q:"79. How many BTMU does the aircraft have? (Level 2)",options:["A. One.","B. One per each wheel.","C. One per main gear."],answer:2},
+{chapter:"ATA 32",q:"80. The MLG door uplock is: (Level 2)",options:["A. Closed mechanically and hydraulically opened.","B. Opened mechanically and hydraulically closed.","C. Opened and closed hydraulically"],answer:0},
+{chapter:"ATA 32",q:"81. What is the normal retraction sequence? (Level 3)",options:["A. Door open, gear up, door close, cancel gear up signal.","B. Door open, gear up, door close, maintain gear up signal.","C. Door open, gear up, door close, cancel door close signal."],answer:0},
+{chapter:"ATA 32",q:"82. How is inflight braking initiated? (Level 3)",options:["A. By setting the landing lever to the UP position.","B. By shock absorber extension.","C. By auto brake deactivation."],answer:0},
+{chapter:"ATA 32",q:"83. When does the BSCU provide anti-skid control? (Level 3)",options:["A. During Alternate braking.","B. During normal braking.","C. Both of above"],answer:2},
+{chapter:"ATA 32",q:"84. What is the purpose of the hydraulic fuses? (Level 3)",options:["A. Only use during Maintenance","B. To shut off the return lines","C. None of above"],answer:2},
+{chapter:"ATA 32",q:"85. Which hydraulic system powers normal braking? (Level 3)",options:["A. Blue for classic system .","B. Yellow for enhance system.","C. None of the above"],answer:2},
+{chapter:"ATA 32",q:"86. What are the auto brake arming condition? (B1,B2) (Level 3)",options:["A. An AUTO BRK pushbutton pressed in, green pressure and anti-skid powered and no failure in normal braking system.","B. An AUTO BRK pushbutton pressed in, yellow pressure and anti-skid powered and no failure in normal braking system.","C. An AUTO BRK pushbutton pressed in, green pressure and anti-skid deactivated and no failure in normal braking system."],answer:0},
+{chapter:"ATA 32",q:"87. When does the automatic changeover of the LGCIUs in control occur? (B1,B2) (Level 3)",options:["A. When 'UP' is selected.","B. When a LGCIU failure","C. Both of above are correct."],answer:2},
+{chapter:"ATA 32",q:"88. Before the landing gear can be retracted, what must the LGCIU detect? (Level 3)",options:["A. Three shock absorbers compressed.","B. Three shock absorbers extended.","C. Main shock absorbers extended."],answer:1},
+{chapter:"ATA 32",q:"89. Can you operate the 'nose wheel steering' during take off and landing when the speed above 130 kts? (Level 3)",options:["A. It is not possible","B. It is possible through rudder pedals","C. It is possible through hand wheels"],answer:0},
+{chapter:"ATA 32",q:"90. When is the anti-skid function inhibited by the BSCU? (Level 3)",options:["A. During alternate braking.","B. When the auto brake system has failed.","C. During in flight braking"],answer:2},
+{chapter:"ATA 32",q:"91. Which component gives priority to the green hydraulic system during classic system? (Level 3)",options:["A. Brake selector valve.","B. Normal brake selector valve","C. None of the above"],answer:2},
+{chapter:"ATA 32",q:"92. Safety valve cutoff hydraulic to landing gear system when speed: (Level 3)",options:["A. More than 100 kts.","B. More than 130 kts","C. None of above"],answer:2},
+{chapter:"ATA 32",q:"93. In case of normal braking system failure, how is alternate barking applied? (B1,B2) (Level 3)",options:["A. Automatically when the selector valve is de-energized","B. Automatically through the automatic selector","C. As soon as the braking pedals are pressed in"],answer:2},
+{chapter:"ATA 32",q:"94. In the A321 enhance (Level 3)",options:["A. A/SKID is controlled by BSCU.","B. A/SKID is controlled by BSCU & ABCU.","C. None of above"],answer:0},
+{chapter:"ATA 32",q:"95. In which mode is progressive pressure sent to the brakes 2 seconds after ground spoilers deployment? (Level 3)",options:["A. MAX mode.","B. MED mode.","C. Both of A and B"],answer:1},
+{chapter:"ATA 32",q:"96. Function of the hydraulic fuse, which is fitted in the line to brake unit is: (Level 2)",options:["A. To make sure that inadvertent braking action can not happen.","B. To make sure that no hydraulic pressure from green system can be transferred to yellow system.","C. To shut off the hydraulic supply to the brake unit case too much fluid flows in to the direction of the brake unit due to line damaged."],answer:2},
+{chapter:"ATA 32",q:"97. What effect on the slat and flap system will failure of SFCC 2 cause? (Level 2)",options:["A. Slat system operates at half speed.","B. Flap system operates at half speed.","C. Slat and flap systems operate at half speed."],answer:2},
+{chapter:"ATA 32",q:"98. When does the UNLK light come on? (Level 3)",options:["A. When the gear and the related doors are not locked up.","B. When the gear is not locked down.","C. When the gear is not locked in the selected position."],answer:2},
+{chapter:"ATA 32",q:"99. What happens when the gravity extension crank handle is rotated? (Level 3)",options:["A. The cut-out and vent valves operate","B. The safety and cut-out valves operate","C. The safety and vent valves operate"],answer:0},
+{chapter:"ATA 32",q:"100. How can the parking brake be hydraulically powered? (Level 3)",options:["A. Only by yellow high pressure","B. Only by the brake accumulator","C. Either by yellow high pressure or by the brake accumulator"],answer:2},
+{chapter:"ATA 32",q:"101. What is the purpose of the by pass valve of the hydraulic steering control unit? (Level 2)",options:["A. To interconnect the two chambers of the steering actuator.","B. To apply hydraulic pressure to the servovalve.","C. To by pass the servovalve in case of BSCU failure."],answer:0},
+{chapter:"ATA 32",q:"102. Which component gives priority to the green hydraulic system? (level 2)",options:["A. Brake selector valve.","B. Throttle valve","C. Automatic selector"],answer:2},
+{chapter:"ATA 32",q:"103. Can you operate the Nose Wheel Steering during take off and landing when the speed is above 130 Kts? (Level 3)",options:["A. It is not possible","B. It is possible through rudder pedals","C. It is possible through hand wheels"],answer:0},
+{chapter:"ATA 32",q:"104. How is the in flight braking initiated? (Level 1)",options:["A. By selecting the landing lever to the 'UP' position","B. By the main landing gear door opening","C. By auto brake deactivation"],answer:0},
+{chapter:"ATA 32",q:"105. By shock absorbers extended",options:["A. What are the auto brake arming conditions? (Level 1)","B. An auto brake pushbutton pressed in, green pressure and anti-skid powered and no failure in normal braking system.","C. An auto brake pushbutton pressed in, yellow pressure and anti-skid powered and no failure in normal braking system."],answer:1},
+{chapter:"ATA 32",q:"106. An auto brake pushbutton pressed in, green pressure and anti-skid deactivated and no failure in normal braking system.",options:["A. During Landing Gear free fall extension, the cut out vavlve and both vent valves operate to depressurize the hydraulic system if: (Level 3)","B. Crank handle moves up to 0.5 turn.","C. Crank handle moves up to 1,5 turns."],answer:2},
+{chapter:"ATA 32",q:"107. If normal braking system failure, alternate braking applied:(Level 1)",options:["A. Automatically when the selector valve is de-energized","B. Automatically through the automatic selector","C. As soon as the braking pedals are pressed in."],answer:2},
+{chapter:"ATA 32",q:"108. Which computer monitors the aircraft tire pressure and brake temperature:(Level 1)",options:["A. BSCU.","B. CFDIU","C. LGCIU"],answer:0},
+{chapter:"ATA 32",q:"109. A changeover between the two BSCU channels takes place:(Level 1)",options:["A. when landing gear control lever is set to down","B. when landing gear control lever is set to up","C. when electrical power is supplied"],answer:0},
+{chapter:"ATA 32",q:"110. Which computer gives the indications on the landing gear wheel page:(Level 1)",options:["A. LGCIU 1","B. The LGCIU 1(2) on duty, then the other LGCIU 2(1) if LGCIU 1 (2) failed.","C. Both LGCIUs."],answer:2},
+{chapter:"ATA 32",q:"111. In normal condition, with all hydraulic systems availability and nose wheel steering toggle switch OFF, applying braking system using pedals will operate:(Level 1)",options:["A. Alternate braking with anti-skid","B. Normal braking system","C. Alternate braking without anti-skid"],answer:2},
+{chapter:"ATA 32",q:"112. The CLASSIC nose wheel steering and gear/door control system is supplied from:(Level 1)",options:["A. green hydraulic system","B. yellow hydraulic system","C. green and yellow hydraulic system"],answer:0},
+{chapter:"ATA 32",q:"113. When is the entire aircraft landing gear hydraulic circuit isolated from the pressure source after retraction:(Level 1)",options:["A. as soon as the control lever is moved to neutral","B. as soon as the airspeed is greater than 260 kts.","C. by rotating joint for nose gear and by safety valve for main gear upon a certain aircraft speed reached."],answer:2},
+{chapter:"ATA 32",q:"114. Which statement is correct concerning alternate braking indication?(Level 1)",options:["A. The 'DECEL' light comes on green when the correct deceleration is reached deceleration is reached","B. A triple indicator for alternate braking system.","C. The applied alternate braking pressure to be monitored via lower ECAM wheel page"],answer:1},
+{chapter:"ATA 32",q:"115. Which one controls the aircraft braking and steering system:(Level 1)",options:["A. BSCU.","B. Hand wheel for steering system and BSCU for aircraft braking","C. LGCIU"],answer:0},
+{chapter:"ATA 32",q:"116. How many air charging valve used to service MLG shock absorber?(Level 1)",options:["A. 1","B. 2","C. 3"],answer:1},
+{chapter:"ATA 32",q:"117. Free fall lever movement between 1.9 and 3 turns:(Level 1)",options:["A. The doors uplocks are released","B. Gear uplocks are released and the landing gear extends by gravity.","C. Operted the cut-out valve and both vent valves to depressurize the system"],answer:1},
+{chapter:"ATA 32",q:"118. Which computer monitors the aircraft brake temperature:(Level 1)",options:["A. BSCU.","B. CFDIU","C. BTMU"],answer:2},
+
+{chapter:"ATA 49",q:"1. The APU magnetic chip detector is located: (Level 1)",options:["A. On the generator oil scavange line","B. On the oil supply line","C. On the gearbox"],answer:2},
+{chapter:"ATA 49",q:"2. What component in the oil system is controlled by ECB? (Level 1)",options:["A. High oil temperature sensor","B. Low oil pressure sensor","C. De-oiling solenoid valve"],answer:2},
+{chapter:"ATA 49",q:"3. After replacing ECB: (Level 2)",options:["A. The APU hours and cycles must be updated through MCDU","B. The DMM automatically reinitializes the new ECB with the old accumulated APU data","C. The DMU automatically reinitializes the new ECB with the old accumulated APU data"],answer:1},
+{chapter:"ATA 49",q:"4. When does the APU air intake ‘Flap Open’ message disappear on lower ECAM during shutdown? (Level 3)",options:["A. As soon as MASTER SW in `OFF` position","B. As soon as N<7%","C. As soon as APU bleed SW in ‘ OFF’ position"],answer:1},
+{chapter:"ATA 49",q:"5. APU air intake duct supplies the air for: (Level 1)",options:["A. the APU engine operation only.","B. the APU load compressor operation only.","C. the APU engine operation and the APU load compressor operation."],answer:2},
+{chapter:"ATA 49",q:"6. Inlet guide vanes(IGVs) control: (Level 1)",options:["A. the amount of air supplied to the load compressor.","B. the amount of air supplied to the APU engine.","C. the amount of air supplied to the load compressor and the amount of air supplied to the APU engine."],answer:0},
+{chapter:"ATA 49",q:"7. How many ways the APU can be manually shut down: (Level 1)",options:["A. 1","B. 2","C. 3"],answer:2},
+{chapter:"ATA 49",q:"8. You shut down the APU from outside the airplane: (Level 2)",options:["A. the APU cools down for a period of time before shutting down.","B. APU shuts down immediately.","C. no way to shut down APU from outside."],answer:1},
+{chapter:"ATA 49",q:"9. Operating limits that can trigger an automatic shutdown are: (Level 1)",options:["A. excessive EGT.","B. low oil pressure or high oil temperature.","C. Both answers are correct."],answer:2},
+{chapter:"ATA 49",q:"10. APU fuel pump: (Level 2)",options:["A. runs only if no tank boost pump feeds the APU feed line.","B. run continuously when the APU is operating.","C. the APU has no own fuel pump."],answer:0},
+{chapter:"ATA 49",q:"11. The IGV actuator uses: (Level 3)",options:["A. high pressure fuel to operate the inlet guide vanes.","B. high pressure air to operate the inlet guide vanes.","C. high pressure hydraulic fluid to operate the inlet guide vanes."],answer:0},
+{chapter:"ATA 49",q:"12. There is a switch labeled FUEL VENT PUSH is installed on the APU compartment forward firewall: (Level 3)",options:["A. to allow maintenance to start the APU.","B. to allow maintenance to operate the APU fuel pump and purge the fuel line from the APU compartment.","C. to allow maintenance staff to shut down the APU in case of emergency."],answer:1},
+{chapter:"ATA 49",q:"13. The APU oil cooler is: (Level 3)",options:["A. a fuel/oil heat exchanger.","B. an air/oil heat exchanger.","C. an air/air heat exchanger."],answer:1},
+{chapter:"ATA 49",q:"14. The APU is ready to supply load, when RPM (round per minute) is at: (Level 3)",options:["A. 10%.","B. 50%.","C. 95%."],answer:2},
+{chapter:"ATA 49",q:"15. Which component controls and monitors the APU operation: (Level 3)",options:["A. the ECB","B. the ECU","C. the EEC"],answer:0},
+{chapter:"ATA 49",q:"16. the APIC APU bleed control valve is: (Level 2)",options:["A. electrically controlled and pneumatically operated.","B. electrically controlled and hydraulically operated.","C. pneumatically controlled and pneumatically operated."],answer:1},
+{chapter:"ATA 49",q:"17. With the APU bleed valve open, releasing the master switch will cause the APU to shut down: (Level 3)",options:["A. Immediately","B. Only after the cool down period has elapsed","C. Only if the START pushbutton is released"],answer:1},
+{chapter:"ATA 49",q:"18. The high oil temperature or low oil pressure detected during APU operation, the ECB will cause the APU to shut down: (Level 3)",options:["A. Only if the MASTER switch is released","B. Immediately","C. Only after the cool down period has elapsed"],answer:1},
+{chapter:"ATA 49",q:"19. What kind of design is the turbine for APU? (HONEYWELL 131-9) (Level )",options:["A. Two stage centrifugal turbine design.","B. Single stage centrifugal turbine design.","C. Two stage axial turbine design"],answer:2},
+{chapter:"ATA 49",q:"20. Which component regulates the airflow to the pneumatic system? (Level 2)",options:["A. The bleed load valve.","B. The Inlet Guide Vanes.","C. IGV actuator"],answer:1},
+{chapter:"ATA 49",q:"21. Which of the following components are operated by high pressure fuel from the FCU (GTCP 36-300)? (Level 3)",options:["A. Inlet guide vane actuator and Surge control Valve","B. Inlet guide vane actuator and Load bleed valve","C. Inlet guide vane actuator"],answer:2},
+{chapter:"ATA 49",q:"22. What are the three APU modules? (Level 2)",options:["A. Compressor, Combustion chambers, Turbine.","B. Power section, Load Compressor, Turbine.","C. Power section, Load Compressor, Gearbox."],answer:2},
+{chapter:"ATA 49",q:"23. How the APU Generator is lubricated? (Level 2)",options:["A. Using the dedicated oil system.","B. Using the common oil system with the APU.","C. By design APU Generator is self lubricated."],answer:1},
+{chapter:"ATA 49",q:"24. When the APU Master switch is set to ON, the APU (Low pressure) fuel pump will run: (Level 3)",options:["A. Continuously","B. Only when the START pushbutton is pressed","C. Only if a low fuel pressure is detected"],answer:2},
+{chapter:"ATA 49",q:"25. Which statement below is correct? (Level 3)",options:["A. The ECB and DMM should not be replaced at the same time.","B. DMMs should be swapped between APUs and aircraft for trouble shooting.","C. The DMM should not be replaced alone because it is dedicated to the certain APU."],answer:0},
+{chapter:"ATA 49",q:"26. What is the purpose of the Oil Temperature Sensor? (Level 3)",options:["A. For indication on ECAM","B. Used for high oil temperature protection and de-oiling during cold weather starts.","C. To protect APU against high oil temperature conditions."],answer:1},
+{chapter:"ATA 49",q:"27. What is only component in the oil system controlled by ECB? (Level 1)",options:["A. Low oil level sensor","B. Low oil pressure sensor","C. De-oiling solenoid valve"],answer:2},
+{chapter:"ATA 49",q:"28. Which component(s) is (are) actuated by the servo fuel? (Level 2)",options:["A. APU bleed control valve actuator and IGV actuator","B. APU surge control valve and IGV actuator","C. APU bleed control valve actuator and APU surge control valveactuator"],answer:1},
+{chapter:"ATA 49",q:"29. Press and hold the APU fuel line vent pushbutton: (Level 2)",options:["A. APU pump runs and fuel LP valve opens","B. APU pump runs and fuel LP valve opens if master switch is “ON”","C. APU pump runs and fuel LP valve opens if the external power is connected to the aircraft"],answer:2},
+{chapter:"ATA 49",q:"30. The primary function of the load compressor is: (Level 1)",options:["A. To provide bleed air for the combustion","B. To provide air for oil and compartment cooling","C. To provide bleed air for the A/C pneumatic system"],answer:2},
+{chapter:"ATA 49",q:"31. It is possible to do an EMERGENCY shutdown of the APU from: (Level 2)",options:["A. The external power control panel on the lower fuselage (108VU).","B. The APU start control panel (25VU).","C. The refuel/defuel control panel (90VU)."],answer:0},
+{chapter:"ATA 49",q:"32. The surge control valve: (Level 2)",options:["A. Electrically controlled, pneumatically operated","B. Electrically controlled, electrically operated","C. Electrically controlled, hydraulically operated"],answer:0},
+{chapter:"ATA 49",q:"33. Which statement is correct regarding the ignition system in APU APIS 3200 ? (Level 2)",options:["A. Dual system with 2 igniter plugs","B. Single alternating system with 2 igniter plugs","C. Single system with 2 igniter plugs"],answer:2},
+{chapter:"ATA 49",q:"34. The starter motor assists the APU up to which speed? (Level 2)",options:["A. 55%","B. 7%","C. 95%"],answer:0},
+{chapter:"ATA 49",q:"35. What is the purpose of the APU: (Level 1)",options:["A. to supply the aircraft the pneumatic and electrical power.","B. to supply the aircraft the pneumatic and hydraulic power.","C. to supply the aircraft the electrical and hydraulic power."],answer:0},
+{chapter:"ATA 49",q:"36. APU air inlet supplies the air for: (Level 1)",options:["A. the APU engine operation only.","B. the APU load compressor operation only.","C. the APU engine operation and the APU load compressor operation."],answer:2},
+{chapter:"ATA 49",q:"37. Which computer controls and monitors the APU operation: (Level 2)",options:["A. ECU.","B. ECB.","C. EEC"],answer:1},
+{chapter:"ATA 49",q:"38. What is the purpose of the FUEL VENT PUSH pushbutton installed on the APU compartment forward firewall: (Level 2)",options:["A. to allow maintenance to operate the APU fuel pump and purge the fuel line from the APUcompartment provided the APU Master Switch is ON.","B. to allow maintenance to operate the APU fuel pump and purge the fuel line from the APU compartment without the APU Master Switch ON.","C. to allow maintenance to shut down the APU in case of emergency."],answer:1},
+{chapter:"ATA 49",q:"39. A bleed control valve is installed to prevent the load compressor from the surge. On which engine the valve is installed (Level 3)",options:["A. APU Honeywell 131-9(A)","B. APU Honeywell GTCP 36-300","C. APU APIC APS 3200"],answer:2},
+{chapter:"ATA 49",q:"40. During starting, the ECB switches the ignition to ON between: (Level 3)",options:["A. Between 0% and 50%.","B. Between 7% and 50%.","C. Between 0% and 60%."],answer:2},
+{chapter:"ATA 49",q:"41. The solenoid valve is open during start-up to 60% when: (Level 3)",options:["A. APU fuel temperature is below -1","B. A/C altitude is above 20,000 ft.","C. A or B."],answer:2},
+{chapter:"ATA 49",q:"42. ECB starts an automatic APU shutdown without time delay when: (Level 3)",options:["A. Gearbox high oil temp threshold: 1678","B. Oil LP: 33 psi.","C. A or B"],answer:2},
+{chapter:"ATA 49",q:"43. WHEN APU PROTECTIVE SHUTDOWN, ECB STRAR APU SHUTDOWN: (Level 2)",options:["A. Only if the MASTER switch is released","B. Immediately","C. Only after the cool down period has elapsed"],answer:1},
+{chapter:"ATA 49",q:"44. Which components have a visual position indicator? (Level 2)",options:["A. Bleed load valve and IGV actuator.","B. IGV actuator.","C. Load control valve and surge control valve"],answer:2},
+{chapter:"ATA 49",q:"45. Above 20,000 ft, the APU can supply: (Level 2)",options:["A. Pneumatic power","B. Electrical power","C. Bleed air and electrical power"],answer:1},
+{chapter:"ATA 49",q:"46. The APU shutdown report can be found after: (Level 2)",options:["A. An abnormal shutdown","B. A normal shutdown","C. Both of the above"],answer:2},
+{chapter:"ATA 49",q:"47. After replacement of the ECB: (Level 2)",options:["A. Do the update of APU hours/cycles in the MCDU as applicable AMM","B. ECB automatically synchronizes hours/cycles with DMU upon self-test","C. Both of the above"],answer:0},
+{chapter:"ATA 49",q:"48. To purge the APU fuel line using push button switch VENT: (Level 3)",options:["A. You must energize ECB","B. No need for ECB power up","C. APU fuel pump is manually turned on"],answer:1},
+{chapter:"ATA 49",q:"49. The APU start sequence is initiated by the: (Level 3)",options:["A. APU MASTER Switch","B. APU START P/B","C. APU BAT P/B"],answer:1},
+{chapter:"ATA 49",q:"50. Which APU components are operated with high pressure fuel from the fuel control unit? (Level 3)",options:["A. The Inlet Guide Vane Actuator and the Surge Control Valve","B. The Load Bleed Valve and the Inlet Guide Vane Actuator","C. The Deoil Solenoid Valve and the Surge Control Valve"],answer:0},
+{chapter:"ATA 49",q:"51. From where the APU emergency shut down can be initiated? (Level 3)",options:["A. Refuel/Defuel panel; External power panel and Cockpit.","B. External power panel and Cockpit only.","C. External power panel only, if the aircraft is on ground."],answer:1},
+{chapter:"ATA 49",q:"52. What is(are) operating limit(s) that can trigger an automatic shutdown of the APU: (Level 3)",options:["A. excessive EGT.","B. high oil pressure or low oil temperature.","C. Both A and B"],answer:0},
+{chapter:"ATA 49",q:"53. What is the right statement: (Level 3)",options:["A. the APU pump runs only if no tank boost pump feeds the APU feed line.","B. the APU pump runs continuously when the APU is operating.","C. the APU has no own boost pump."],answer:0},
+{chapter:"ATA 49",q:"54. Which servo pressure is used to operate the IGVs: (Level 2)",options:["A. high fuel pressure.","B. high air pressure","C. high oil pressure."],answer:0},
+{chapter:"ATA 49",q:"55. What is the purpose of the switch labeled FUEL VENT PUSH on the APU compartment forward firewall: (Level 2)",options:["A. to allow maintenance staff to start the APU.","B. to allow maintenance staff to operate the APU fuel pump and purge the fuel line from the APU compartment.","C. to allow maintenance staff to shut down the APU in case of emergency."],answer:1},
+{chapter:"ATA 49",q:"56. What is the un-latch sequence of fasteners for APU access doors? (Level 3)",options:["A. From forward to aft.","B. From aft to forward.","C. Depend on APU."],answer:1},
+{chapter:"ATA 49",q:"57. Before starting APU, what is item that you must check outside APU? (Level 3)",options:["A. Electrical ground cart available.","B. There is enough fuel.","C. There is FOD near air intake."],answer:2},
+{chapter:"ATA 49",q:"58. With APU access doors opened, can you do starting APU? (Level 3)",options:["A. No.","B. Yes.","C. Yes, if there is sufficient extinguishing."],answer:2},
+{chapter:"ATA 49",q:"59. There is the APU protective shutdown. Do you have to monitor APU starting? (Level 1)",options:["A. No.","B. Yes.","C. Yes, depend on the kind of APU."],answer:1},
+{chapter:"ATA 49",q:"60. The surge control valve of APU is: (Level 2)",options:["A. Electrically operated modulating valve","B. Pneumatically operated modulating valve","C. Hydraulically operated modulating valve"],answer:2},
+{chapter:"ATA 49",q:"61. When does the ECB cut off the supply to the starter? (Level 3)",options:["A. 55%","B. 7%","C. 95%"],answer:0},
+{chapter:"ATA 49",q:"62. What does an amber ‘Fault’ light In the APU Master SW p/b indicate? (Level 3)",options:["A. An APU auto shutdown has occurred","B. An APU bleed leak","C. APU is running but can not supply electrical power"],answer:0},
+{chapter:"ATA 49",q:"63. Which statement is correct during APU APIS 3200 start sequence: (Level 3)",options:["A. 1 ignitor plug operates at the time","B. 2 ignitor plugs operate alternatively","C. 2 ignitor plugs operate at the same time"],answer:1},
+{chapter:"ATA 49",q:"64. With APU bleed valve open, releasing the master sw will cause the APU to shut down: (Level 3)",options:["A. Immediately","B. Never, the APU bleed control valve must be shut first","C. Only after the cool down period has elapsed"],answer:2},
+{chapter:"ATA 49",q:"65. How is the IGV system controlled? (Level 1)",options:["A. By BMC1","B. By BMC2","C. By ECB"],answer:2},
+{chapter:"ATA 49",q:"66. In case of failure on ground, how can you open or close the air intake flap? (Level 2)",options:["A. The air intake flap actuator cannot be overridden.","B. The air intake flap actuator can be hydraulically overridden.","C. The air intake flap actuator can be overridden by a Manual Override Device."],answer:2},
+{chapter:"ATA 49",q:"67. The APU oil cooler is used to remove heat from the oil system: (Level 1)",options:["A. When oil temperature is high enough","B. When oil temperature is cold enough","C. Always"],answer:0},
+{chapter:"ATA 49",q:"68. Generally, during APU operation: (Level 1)",options:["A. The electric power supply has priority over the bleed air supply","B. The bleed air supply has priority over the electric power supply","C. There is no priority order"],answer:0},
+{chapter:"ATA 49",q:"69. In the APU fuel system the ECB controls: (Level 1)",options:["A. The fuel metering valve and the pressure regulator","B. The fuel metering valve and 3 way solenoid valve","C. The fuel metering valve, the pressure regulator valve and 3 way solenoid valve"],answer:1},
+{chapter:"ATA 49",q:"70. When the apu master sw is set to on, the apu fuel pump will run : (Level 1)",options:["A. Only if low fuel pressure is detected","B. Only if L/H wing pumps are not running","C. As soon as when START pushbutton is pressed"],answer:0},
+{chapter:"ATA 49",q:"71. Generally , during apu operation : (Level 1)",options:["A. The electric power supply has priority over the bleed air supply","B. The bleed air supply has priority over the electric power supply","C. There is no priority order"],answer:0},
+{chapter:"ATA 49",q:"72. What is the main function of the APU? (Level 1)",options:["A. To produce independent pneumatic and hydraulic power.","B. To produce independent pneumatic and electrical power.","C. To produce independent electrical and hydraulic power."],answer:1},
+{chapter:"ATA 49",q:"73. The APU is: (Level 1)",options:["A. Single shaft assembly","B. Two shaft assembly","C. Two shaft assembly interconnected through a gearbox"],answer:0},
+{chapter:"ATA 49",q:"74. The Electronic Control Box has : (Level 1)",options:["A. Restricted authority over APU operation.","B. Only APU monitoring function.","C. Full authority over APU operation."],answer:2},
+{chapter:"ATA 49",q:"75. How can you activate the APU fuel vent system? (Level 1)",options:["A. Push and hold the VENT P/B at the APU compartment.","B. Select master switch ON.","C. Push and hold the VENT P/B with the master switch selected ON."],answer:0},
+{chapter:"ATA 49",q:"76. When the APU is started, the APU generator will be energized at: (Level 3)",options:["A. N = 75 %","B. N = 95 % plus 2 seconds","C. N = 50 %"],answer:1},
+{chapter:"ATA 49",q:"77. Normal APU shutdown is performed from? (Level 2)",options:["A. APU control panel.","B. Fire panel.","C. External power control panel."],answer:0},
+{chapter:"ATA 49",q:"78. Which component controls the ignition and starting operation? (Level 2)",options:["A. The Electronic Control Box.","B. The Ignition Exciter Unit.","C. The Start Contactor."],answer:0},
+{chapter:"ATA 49",q:"79. When the LOW OIL LEVEL message comes on,with no oil leakage, sufficient oil is available to allow a further: (Level 3)",options:["A. 8 hours of APU operation.","B. 10 hours of APU operation.","C. 12 hours of APU operation."],answer:1},
+{chapter:"ATA 49",q:"80. WHEN DOES THE APU AIR INTAKE FLAP OPEN ? (Level 2)",options:["A. As soon as MASTER SW in `ON` position","B. As soon as N>7%","C. As soon as ignition is activated"],answer:0},
+{chapter:"ATA 49",q:"81. THE STARTER OF APU IS: (Level 2)",options:["A. Pneumatically operated","B. Electrically operated","C. Hydraulically operated"],answer:1},
+{chapter:"ATA 49",q:"82. What is a/an signal ECB supply to shutdown the APU on normal mode ? (Level 2)",options:["A. Overtemperature","B. Clogged oil filter","C. Overspeed"],answer:2},
+{chapter:"ATA 49",q:"83. The starter of APU is: (Level 2)",options:["A. Pneumatically operated","B. Electrically operated","C. Hydraulically operated"],answer:0},
+{chapter:"ATA 49",q:"84. 1. APU emergency shut down can be initiated from:(Level 1)",options:["A. Refuel/Defuel panel; External power panel and Cockpit","B. External power panel and Cockpit.","C. External power panel only, if the aircraft is on ground"],answer:1},
+{chapter:"ATA 49",q:"85. 2.Indication can be displayed on the APU page:(Level 2)",options:["A. FLAP OPEN.","B. FUEL LO PR; LOW OIL LVL","C. FLAP OPEN; FUEL LO PR; LOW OIL LVL."],answer:2},
+{chapter:"ATA 49",q:"86. 3. APU modules include:(Level 1)",options:["A. Compressor, Combustion chambers, Turbine","B. Power section, Load Compressor, Turbine","C. Power section, Load Compressor, Gearbox."],answer:2},
+{chapter:"ATA 49",q:"87. 4. APU OIL quantity can check on:(Level 1)",options:["A. APU page, on sight glass located on the gear box and interrogate the CFDS.","B. APU page, on sight glass located on the gear box","C. APU page, on sight glass located on the oil cooler and interrogate the CFDS"],answer:0},
+{chapter:"ATA 49",q:"88. 6. During Main Engine Start: (Level 1)",options:["A. APU speed 101 %, IGV opened, SCV modulated and load valve opened.","B. APU speed 99 %, SCV closed, load valve opened","C. APU speed 101 %, IGV opened, SCV closed, load valve modulated"],answer:0},
+{chapter:"ATA 49",q:"89. Incase APU has an automatic shut down, information of the shut down in:(Level 2)",options:["A. PFR","B. APU page","C. Shut Down menu on CFDS."],answer:2},
+{chapter:"ATA 49",q:"90. In cruise, the APU can supply:(Level 1)",options:["A. Pneumatic power","B. Electrical power","C. Bleed air and electrical power"],answer:1},
+{chapter:"ATA 49",q:"91. The APU start (to rotate) sequence is initiated by the:(Level 1)",options:["A. APU MASTER Switch","B. APU START P/B","C. APU BAT P/B"],answer:1},
+{chapter:"ATA 49",q:"92. Operating limits that can trigger an automatic shut down are:(Level 2)",options:["A. excessive EGT","B. low oil pressure or high oil temperature","C. low oil pressure, high oil temperature or excessive EGT"],answer:2},
+{chapter:"ATA 49",q:"93. How many mount GTCP36-300 attach to aircraft is:(Level 2)",options:["A. 7 rods/3 mounts.","B. 6 rods/3 mounts.","C. 8 rod/4 mounts."],answer:0},
+{chapter:"ATA 49",q:"94. APU air intake has:(Level 1)",options:["A. One air intake flap installed in the top left area of the tail cone.","B. One air intake flap installed in the forward lower area of the tail cone.","C. Two air intake flap installed in the top right area of the tail cone."],answer:1},
+{chapter:"ATA 49",q:"95. IGV actuator , Bleed and surge control valve operate by:(Level 2)",options:["A. Air pressure.","B. Fuel pressure","C. Electrical."],answer:1},
+{chapter:"ATA 49",q:"96. How many igniter plug intalled on APU(GTCP36)?(Level 1)",options:["A. 1","B. 2","C. 3"],answer:0},
+{chapter:"ATA 49",q:"97. How many fuel atomizer in combustion system(GTCP36)?(Level 1)",options:["A. 5","B. 6","C. 7"],answer:1},
+{chapter:"ATA 49",q:"98. Turbine in power section (GTCP36) consist of:(Level 1)",options:["A. 2 axial stages.","B. Single stage radial inflow turbine .","C. 3 stages radial inflow turbine ."],answer:1},
+{chapter:"ATA 49",q:"99. Manual cranking plug installed on:(Level 1)",options:["A. Oil tank pad under of the gearbox.","B. Air/oil seperator pad in right hand side of the gearbox.","C. Starter in font of the gearbox"],answer:2},
+{chapter:"ATA 49",q:"100. After crank APU shaft for BSI, we need:(Level 1)",options:["A. Install plug and do leak check.","B. Install/replace new performed packing.","C. Install cranking plug, Install/replace new performed packing BSI Port and do leak check."],answer:2},
+{chapter:"ATA 49",q:"101. The 131-9A APU is:(Level 1)",options:["A. Single shaft gas turbine engine.","B. Twin shaft gas turbine engine.","C. Three shaft gas turbine engine."],answer:0},
+{chapter:"ATA 49",q:"102. The APU installed in:(Level 1)",options:["A. A fireproof compartment between FR80 and FR84 forward of aircraft","B. A pressurized compartment between FR80 and FR84 rear of aircraft","C. A fireproof compartment between FR80 and FR84 rear of aircraft"],answer:2},
+{chapter:"ATA 49",q:"103. Engine system includes:(Level 1)",options:["A. Power section, load compressor and accessory gear box.","B. Power section, load compressor, load turbine and accessory gear box.","C. Power section, load compressor, conbustor, load turbine and accessory gear box."],answer:0},
+{chapter:"ATA 49",q:"104. How many valve/main component in APU 131-9 bleed system?(Level 1)",options:["A. 1 (Bleed valve)","B. 2 (Bleed and surge control valve)","C. 3 (Bleed and surge control valve, IGV actuator )"],answer:2},
+{chapter:"ATA 49",q:"105. 131-9 Load compressor include:(Level 3)",options:["A. Single-stage centrifugal compressor with a 7,5 : 1 pressure ratio.","B. Single-stage centrifugal compressor with a 4 : 1 pressure ratio.","C. Two stage cirtrifugal compressor."],answer:1},
+{chapter:"ATA 49",q:"106. Combustion system (131-9) is:(Level 3)",options:["A. One-piece, axial-flow annular combustor.","B. One-piece, reverse-flow annular combustor.","C. Two-piece, reverse-flow annular combustor."],answer:1},
+{chapter:"ATA 49",q:"107. Turbine in power section (131-9) consist of:(Level 1)",options:["A. 2 axial stages.","B. 3 centifugal stages.","C. 3 axial stages."],answer:0},
+{chapter:"ATA 49",q:"108. Purpose of Inlet guide Vane is:(Level 1)",options:["A. Control the compressor output to the aircraft pneumatic system.","B. Modulate airflow coming from inlet plenum to Power section compressor.","C. Modulate airflow coming from inlet plenum to Power section turbiner."],answer:0},
+
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer)
+        label.classList.add("wrong");
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length}`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer)
+      label.classList.add("wrong");
+  });
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let count = parseInt(document.getElementById("questionCount").value);
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  // Get chapter pool
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  // Clamp range
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  // Apply range (convert to 0-based index)
+  pool = pool.slice(start - 1, end);
+
+  // Fix count
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  // Deep copy
+  pool = JSON.parse(JSON.stringify(pool));
+
+  // Shuffle questions if enabled
+  if (shuffleEnabled) shuffleArray(pool);
+
+  // Pick N
+  questions = pool.slice(0, count);
+
+  // Shuffle answers if enabled
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  const rangeSize = end - start + 1;
+
+  document.getElementById("questionCount").value = rangeSize;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+
+  // Reset range to full chapter
+  document.getElementById("rangeStart").value = 1;
+  document.getElementById("rangeEnd").value = size;
+}
+
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
