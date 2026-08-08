@@ -725,13 +725,15 @@ function updateWrongQuestionList(){
     const list =
         document.getElementById("wrongList");
 
-    const chapter =
+    const selectedChapter =
         document.getElementById("chapterSelect").value;
 
-    const chapterID =
-        chapter
-        .replace(/\s+/g,"_")
-        .replace(/[^a-zA-Z0-9_]/g,"");
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+
+    const chapterID = currentQuestion.chapterID;
 
 
     if (!wrongQuestions[chapterID] ||
@@ -754,13 +756,15 @@ function reviewWrongQuestions(){
     const shuffleEnabled =
         document.getElementById("shuffleToggle").checked;
 
-    const chapter =
+    const selectedChapter =
         document.getElementById("chapterSelect").value;
 
-    const chapterID =
-        chapter
-        .replace(/\s+/g,"_")
-        .replace(/[^a-zA-Z0-9_]/g,"");
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+
+    const chapterID = currentQuestion.chapterID;
 
 
     if (!wrongQuestions[chapterID] ||
