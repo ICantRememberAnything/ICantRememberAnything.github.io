@@ -1,0 +1,825 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz ATHK</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+  border: 2px solid #2e7d32;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+  border: 2px dashed #c62828;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz ATHK</h2>
+<h3>Tự check lại đáp án nhé</h3>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="chapterChanged()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    From:
+    <input type="number" id="rangeStart" value="1" min="1">
+  </label>
+
+  <label>
+    To:
+    <input type="number" id="rangeEnd" value="50" min="1">
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All in range</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+
+  
+  <button onclick="reviewWrongQuestions()">
+  Wrong questions only
+  </button>
+
+</div>
+
+<div id="quiz"></div>
+
+<div id="wrongPanel">
+
+<b>Wrong questions:</b>
+
+<span id="wrongList">
+None
+</span>
+
+<br><br>
+
+<button onclick="reviewWrongQuestions()">
+Wrong questions only
+</button>
+
+<button onclick="clearWrongQuestions()">
+Clear history
+</button>
+
+</div>
+
+<hr>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapterID:"ATHK",questionID:1,chapter:"ATHK",q:"20. Điều nào sau đây là bị cấm :",options:["A. Chạy xe phía sau một máy bay đang đậu.","B. Xe kéo kéo 3 mâm hàng một lúc.","C. Bật đèn pha khi trời mù."],answer:2},
+{chapterID:"ATHK",questionID:2,chapter:"ATHK",q:"22. Phương tiện, trang thiết bị có chân chống thủy lực thì phải sử dụng chân chống này khi nâng cao trên :",options:["A. 2,5 m.","B. 2,75m.","C. 3m ."],answer:0},
+{chapterID:"ATHK",questionID:3,chapter:"ATHK",q:"24. Máy bay khi cần được kéo sang bến đậu khác để khai thác hoặc kéo về xưởng để sửa chữa thì phải:",options:["A. Lập kế hoạch trước và thông báo cho Trực ban trưởng- Cảng vụ.","B. Lập kế hoạch trước và thông báo cho Trực ban trưởng- Cảng vụ, Đội chỉ huy máy bay lăn để phối hợp.","C. Báo cáo cho ông giám đốc TIAGS biết."],answer:1},
+{chapterID:"ATHK",questionID:4,chapter:"ATHK",q:"25. Container đựng hàng để trên sân đậu máy bay do chằng néo không cẩn thận bị gió đẩy va vào máy bay, gây thiệt hại. Trách nhiệm này thuộc về ai ?",options:["A. An ninh sân đậu. Do không quan sát bảo vệ","B. Trực ban trưởng. Do thiếu đôn đốc.","C. Cơ quan chủ quản. Do không chằng néo cẩn thận"],answer:2},
+{chapterID:"ATHK",questionID:5,chapter:"ATHK",q:"26. Tốc độ tối đa của xe dẫn tàu bay trên đường lăn là bao nhiêu?",options:["A. 40 km/h;","B. 35 km/h;","C. 25 km/h."],answer:1},
+{chapterID:"ATHK",questionID:6,chapter:"ATHK",q:"28. Chiều cao tối đa của phương tiện bị cấm chui qua cầu hành khách là bao nhiêu?",options:["A. Lớn hơn 3,2 mét;","B. Lớn hơn 3,90 mét;","C. 3,50 mét."],answer:1},
+{chapterID:"ATHK",questionID:7,chapter:"ATHK",q:"29. Quy định nào sau đây là đúng?",options:["A. Xe đầu kéo không được kéo một lúc quá 03 mâm có hàng hoặc 05 mâm không có hàng đặt ở trên.","B. Xe đầu kéo không được kéo một lúc quá 03 mâm có hàng hoặc 04 mâm không có hàng đặt ở trên.","C. Xe đầu kéo không được kéo một lúc quá 04 mâm có hàng hoặc 05 mâm không có hàng đặt ở trên."],answer:1},
+{chapterID:"ATHK",questionID:8,chapter:"ATHK",q:"30. Tim đường lăn được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:0},
+{chapterID:"ATHK",questionID:9,chapter:"ATHK",q:"31. Khu vực tập kết các phương tiện được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:2},
+{chapterID:"ATHK",questionID:10,chapter:"ATHK",q:"32. Khu vực cấm đậu được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:1},
+{chapterID:"ATHK",questionID:11,chapter:"ATHK",q:"33. Khi tàu bay đang đậu, những phương tiện không trực tiếp tham gia phục vụ tàu bay thì phải đỗ cách xa tàu bay tối thiểu bao nhiêu mét?",options:["A. 20 mét;","B. 15 mét;","C. 10 mét."],answer:1},
+{chapterID:"ATHK",questionID:12,chapter:"ATHK",q:"34. Các Phương Tiện Khu Bay chỉ được phép tiếp cận máy bay khi",options:["A. Máy bay đã dừng hẳn, thợ máy mặt đất đã nối liên lạc với Cơ trưởng","B. Máy bay được chèn bánh, đèn báo hiệu các động cơ chính đã ngừng hoạt động","C. Tất cả các quy định trên"],answer:2},
+{chapterID:"ATHK",questionID:13,chapter:"ATHK",q:"35. Khi tiếp cận máy bay các Phương Tiện Khu Bay phải",options:["A. Vào đúng trình tự, vị trí của mình theo sơ đồ phục vụ của từng loại máy bay cụ thể","B. Không làm ảnh hưởng đến hoạt động của các Phương Tiện Khu Bay khác, đặc biệt không dừng đỗ gây cản trở lối thoát hiểm của máy bay và xe xăng dầu","C. Tất cả các quy định trên"],answer:2},
+{chapterID:"ATHK",questionID:14,chapter:"ATHK",q:"37. Nhân viên vận hành Phương Tiện Khu Bay làm việc trên khu bay phải mặc áo có gắn dải phản quang khi:",options:["A. Làm việc ban đêm hoặc thời tiết xấu","B. Bất cứ lúc nào cũng phải mặc quần áo bảo hộ lao động, đi ủng, đeo kính và dùng bịt tai","C. Cả 2 yêu cầu trên"],answer:0},
+{chapterID:"ATHK",questionID:15,chapter:"ATHK",q:"66. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu khai thác kỹ thuật của phương tiện bao gôm:",options:["A. Nhật ký kỹ thuật, biên bản kỹ thuật, tài liệu thống kê kỹ thuật, báo cáo kỹ thuật, báo cáo đột xuất","B. Tài liệu hướng dẫn và tài liệu khai thác kỹ thuật.","C. Lý lịch và hồ sơ cải tạo, thay đổi kiểu loại.","D. Cả a, b, c"],answer:0},
+{chapterID:"ATHK",questionID:16,chapter:"ATHK",q:"67. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu hướng dẫn kỹ thuật là:",options:["A. Tài liệu do người chế tạo và người khai thác phương tiện ban hành để hướng dân việc thực hiện các tiêu chuẩn kỹ thuật trong quá trình thiết kế, bảo trì phương tiện.","B. Tài liệu do người chế tạo hoặc người khai thác phương tiện ban hành để hướng dẫn việc thực hiên các tiêu chuẩn kỹ thuât trong quá trình thiết kế, chế tạo, khai thác, bảo trì phương tiện.","C. Tài liệu đưa ra những thông tin kỹ thuật cần thiết, những quy định, hướng dẫn cụ thể cho người điều khiển, vận hành phương tiện, trang thiết bị.","D. Tài liệu nêu rõ cấu tạo, nguyên lý làm việc của phương tiện, trang thiết bị."],answer:1},
+{chapterID:"ATHK",questionID:17,chapter:"ATHK",q:"68. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu hướng dẫn kỹ thuật bao gồm:",options:["A. Tài liệu khai thác kỹ thuật và lý lịch của phương tiện","B. Tài liệu hướng dẫn sử dụng, tài liệu hướng dẫn bảo trì, tài liệu huấn luyện kỹ thuật.","C. Tài liệu hướng dẫn bảo dưỡng, sửa chữa","D. Tài liệu hướng dẫn kỹ thuật của nhà sản xuất phương tiện"],answer:1},
+{chapterID:"ATHK",questionID:18,chapter:"ATHK",q:"69. Theo quy định tại Thông tư 29/2021/TT-BGTVT, lý lịch kỹ thuật của phương tiện do ai xây dựng?",options:["A. Người quản lý, khai thác phương tiện.","B. Người sản xuất phương tiện.","C. Người khai thác cảng hàng không.","D. Người sử dụng phương tiện"],answer:0},
+{chapterID:"ATHK",questionID:19,chapter:"ATHK",q:"70. Theo quy định của Thông tư 29/2021/TT-BGTVT, tổ chức nào đề nghị cấp giấy phép nhân viên điều khiển, vận hành thiết bị hàng không, phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay?",options:["A. Tổ chức quản lý nhân viên.","B. Cá nhân người lao động.","C. Doanh nghiệp hàng không","D. Nhân viên hàng không"],answer:0},
+{chapterID:"ATHK",questionID:20,chapter:"ATHK",q:"71. Theo quy định của Thông tư 29/2021/TT-BGTVT, đối với giấy phép lần đầu, sau bao nhiêu ngày kể từ ngày nhận đủ hồ sơ theo quy định, Cục Hàng không Việt Nam thẩm định hồ sơ, tổ chức kiểm tra, quyết định cấp giấy phép, hoặc thông báo bằng văn bản lý do từ chối cấp giấy phép cho người đề nghị?",options:["A. 10 ngày","B. 15 ngày.","C. 20 ngày.","D. 30 ngày."],answer:2},
+{chapterID:"ATHK",questionID:21,chapter:"ATHK",q:"72. Theo quy định của Thông tư 29/2021/TT-BGTVT, Cục Hàng không Việt Nam cấp lại giấy phép bị mất, hỏng trong thời hạn bao nhiêu ngày kể từ ngày nhận đủ hồ sơ theo quy định?",options:["A. 03 ngày.","B. 05 ngày.","C. 07 ngày.","D. 10 ngày."],answer:1},
+{chapterID:"ATHK",questionID:22,chapter:"ATHK",q:"74. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đường giao thông trong cảng 14ang không, sân bay, bao gôm những khu vực nào?",options:["A. Đường giao thông nội bộ trong sân bay và đường giao thông nội bộ trong cảng hàng không","B. Đường giao thông trong và ngoài khu bay","C. Theo quy định của từng cảng 14ang không","D. Đường giao thông trong và ngoài khu đường lăn, sân đỗ"],answer:0},
+{chapterID:"ATHK",questionID:23,chapter:"ATHK",q:"75. Theo quy định tại Thông tư 29/2021/TT-BGTVT, giao thông trong sân bay phải tuân thủ theo quy định nào?",options:["A. Tài liệu khai thác sân bay","B. Quy định của pháp luật về giao thông","C. Quy định của người khai thác cảng hàng không","D. Tài liệu khai thác cảng hàng không, sân bay,"],answer:0},
+{chapterID:"ATHK",questionID:24,chapter:"ATHK",q:"79. Theo quy đinh tại Thông tư 29/2021/TT-BGTVT, quy định khi tiếp cận tàu bay, nhân viên vận hành trang thiết bị cần tuân theo các quy tắc nào sau đây?",options:["A. Đỗ đúng vị trí theo sơ đồ phục vụ của từng loại tàu bay và không được ảnh hường đến hoạt động của các phương tiện khác hoạt động trên khu bay, có người hướng dẫn đối với các phương tiện tiếp cận tàu bay theo hình thức lùi và tiếp cận tàu bay theo đúng thứ tự quy định.","B. Chỉ được phép tiếp cận khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tẳt; đỗ đúng vị trí theo sơ đồ phục vụ của từng loại phương tiện, trang thiết bị phục vụ tàu bay.","C. Chỉ được phép tiếp cận khỉ tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt, đèn nháy cảnh báo đã tắt; trừ trường hợp tàu bay phải có phương tiện hỗ trợ mới tắt được động cơ; tiếp cận tàu bay theo đúng thứ tự quy định; đỗ đúng vị trí theo sơ đồ phục vụ của từng loại tàu bay và không được ảnh hưởng đến hoạt động của các phương tiện khác hoạt động trên khu bay; có người hướng dẫn đối với các phương tiện tiếp cận tàu bay theo hình thức lùi, trừ các phương tiện có hệ thống tự động tiếp cận tàu bay.","D. a và b"],answer:2},
+{chapterID:"ATHK",questionID:25,chapter:"ATHK",q:"80. Theo quy định tại Thông tư 29/2021/TT-BGTVT, sân đỗ tàu bay (Apron) đựợc định nghĩa:",options:["A. Là khu vực được xác định trong sấn bay dành cho tàu bay đỗ để phục vụ hành khách lên, xuống; xếp, dỡ hành lý, bưu gửi, hàng hoá; tiếp nhiên liệu; cung ứng suất ăn; phục vụ kỹ thuật hoặc bảo dưỡng tàu bay.","B. Là khu vực được xác định trong sân bay dành cho tàu bay đỗ để phục vụ hành khách lên, xuống; xếp, dỡ hành lý, thư, bưu phẩm, bưu kiện, hàng hoá.","C. Là khu vực được xác định trong sân bay dành cho tàu bay đỗ để tiếp nhận nhiên liệu; cung ứng suất ăn; phục vụ kỹ thuật hoặc bảo dưỡng tàu bay.","D. Là khu vực được xác định tại khu vực hạn chế càng hàng không sân bay sử dụng cho việc đỗ tàu bay phục vụ vận tải hàng không."],answer:0},
+{chapterID:"ATHK",questionID:26,chapter:"ATHK",q:"81. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đường lăn, sân đỗ tàu bay phải đảm bảo:",options:["A. Đầy đủ đèn chỉ dẫn cho tàu bay tự lăn ra, vào vị trí đỗ từ đường cất hạ cánh an toàn theo tiêu chuân sân bay dân dụng.","B. Đầy đủ sơn tín hiệu, biển báo cho tàu bay tự lăn ra, vào vị trí đỗ từ đường cất hạ cánh an toàn theo tiêu chuẩn sân bay dân dụng.","C. Đầy đủ sơn tín hiệu, biển báo hoặc đèn chỉ dẫn cho tàu bay tự vận hành lăn an toàn vào vị trí theo tiêu chuẩn."],answer:2},
+{chapterID:"ATHK",questionID:27,chapter:"ATHK",q:"82. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đối với cảng hàng không, sân bay, chưa đáp ứng đây đủ tiêu chuẩn cho việc tàu bay tự di chuyển an toàn vào vị trí đỗ thì:",options:["A. Bắt buộc phải sử dụng xe dẫn đường tàu bay (follow-me) để dẫn dắt tàu bay vào vị trí đỗ.","B. Người khai thác cảng hàng không, sân bay, có trách nhiệm cung cấp miễn phí dịch vụ xe dẫn đường tàu bay để dẫn dắt tàu bay vào vi trí đỗ.","C. Người khai thác cảng hàng không, sân bay, chỉ cung cấp dịch vụ xe dẫn dường tàu bay vào vị trí đỗ theo yêu cầu của người khai thác tàu bay."],answer:1},
+{chapterID:"ATHK",questionID:28,chapter:"ATHK",q:"86. Theo quy định tại Thông tư 53 về môi trường, ừong hoạt động hàng không dân dụng, các giải pháp giảm thiêu khí thải được áp dụng đôi với phương tiện, trang thiết bị hoạt động tại cảng hàng không, sân bay, bao gôm:",options:["A. Thực hiện bảo dưỡng hệ thống phương tiện, trang thiết bị đúng chế độ quy định; Hạn chế hoạt động của động cơ khỉ phương tiện, thiết bị tạm dừng hoạt động; Áp dụng tốc độ, chế độ tăng tốc hợp lý khi phương tiện, thiết bị hoạt động tại cảng hàng không, sân bay,","B. Thiết lập các tuyến giao thông nội cảng họp lý nhằm giảm thiểu quãng đường hoạt động của phương tiện.","C. Thiết lập các tuyến giao thông tại khu vực hạn chế của Cảng hàng không, sân bay, phù hợp với phương tiện chuyên ngành hàng không nhăm giảm thiểu quãng đường hoạt động của phương tiện.","D. a, và c"],answer:0},
+{chapterID:"ATHK",questionID:29,chapter:"ATHK",q:"87. Theo quy định tại Thông tư 53 về môi trường, ừong hoạt động hàng không dân dụng, các biện pháp giảm thiểu ô nhiễm môi trường nước trong quá trình khai thác, bảo dưỡng hệ thống phương tiện và trang thiết bị, bao gồm:",options:["A. Ngăn chặn rò rỉ trực tiếp hoặc gián tiếp nhiên liệu, dầu mỡ, hóa chất ra khu vực Cảng hàng không, sân bay, trong quá trình bảo dưỡng tàu bay, trong quá trình khai thác, bảo dưỡng hệ thống phưomg tiện và trang thiêt bị.","B. Phân tách dầu mỡ lẫn trong nước thải từ hoạt động bảo dưỡng phương tiện, trang thiết bị trước khi xả thải vào hệ thống thu gom, xử lý nước thải của cảng hàng không, sân bay, thực hiện bảo dưỡng, rửa tàu bay, phương tiện, trang thiết bị tại khu vực cỏ hệ thống thu gom và phân tách dầu mỡ khỏi nước thải.","C. Ngăn chặn rò rỉ ra khu vực cảng hàng không, sân bay, trong quá trình bảo dưỡng tàu bay, phương tiện và trang thiết bị; Phân tách dâu mỡ lân trong nước thải từ hoạt động bảo dưỡng phương tiện, trang thiết bị trước khi xả thải vào hệ thông thu gom, xử lý nước thải của cảng hàng không, sân bay; Thực hiện bảo dưỡng, rửa tàu bay, phương tiện, trang thiết bị tại khu vực có hệ thống thu gom và phân tách dầu mỡ khỏi nước thải."],answer:2},
+{chapterID:"ATHK",questionID:30,chapter:"ATHK",q:"109. Theo quy định tại TCCS 18, khi thiết kế các phương tiện mặt đất phục vụ tàu bay các khoảng cách khai thác vận hành an toàn cần được quan tâm dựa trên cơ sở gì?",options:["A. Tàu bay có trọng lượng khai thác lớn nhất","B. Tàu bay có trọng lượng khai thác nhỏ nhất","C. Theo quy định của nhà sản xuất phương tiện"],answer:0},
+{chapterID:"ATHK",questionID:31,chapter:"ATHK",q:"121. Trường họp khi đang cấp khí khởi động máy bay xảy ra sự cố mất liên kết ống cấp khí với máy bay phải xử lý thế nào?",options:["A. Tắt động cơ ngay lập tức.","B. Đóng van cấp khí ngay lập tức và tắt động cơ.","C. Tắt động cơ và sau đó đóng van cấp khí."],answer:1},
+{chapterID:"ATHK",questionID:32,chapter:"ATHK",q:"122. Trường họp xe nâng hàng đang tiếp cận máy bay, sàn nâng trước đột ngột nâng lên phải xử lý thế nào?",options:["A. Tắt động cơ.","B. Tác động công tắc hạ sàn nâng.","C. Đóng công tắc khẩn cấp."],answer:2},
+{chapterID:"ATHK",questionID:33,chapter:"ATHK",q:"123. Tại khu vực hạn chế của cảng hàng không sân bay, công tác kéo đẩy tàu bay do ai chỉ huy?",options:["A. Cơ trưởng chuyến bay","B. Thợ máy","C. Người giám sát phương tiện","D. Đài kiểm soát mặt đất"],answer:1},
+{chapterID:"ATHK",questionID:34,chapter:"ATHK",q:"131. Theo quy định tại TCCS 18, phương tiện khu bay để đủ điều kiện làm việc cả ngày và đêm phải được hang bị các thiết bị như thế nào?",options:["A. Thiết bị cảnh báo phù hợp (đèn, tấm phản quang) theo quy định của nhà sản xuất phương tiện.","B. Thiết bị cảnh báo phù hợp (đèn, tấm phản quang) ở các phía của phương tiện.","C. Thiết bị cảnh báo cho từng loại phương tiện tùy theo nhiệm vụ cụ thể của phương tiện đó.","D. Thiết bị cảnh báo phù họp (đèn, tấm phản quang) theo quy định của người khai thác và quản lý phương tiện."],answer:1},
+{chapterID:"ATHK",questionID:35,chapter:"ATHK",q:"132. Theo quy định tại TCCS 18, động cơ đốt trong của các phương tiện khu bay phải đáp ứng tiêu chuân môi trường như thê nào?",options:["A. Theo quy định của Quy chuẩn kỹ thuật quốc gia về chất lượng an toàn kỹ thuật và bảo vệ môi trường đối với xe máy chuyên dùng.","B. Theo quy định tại Thông tư về bảo vệ môi trường trong hoạt động hàng không dân dụng.","C. Theo quy định của người sản xuất phương tiện","D. Theo quy định của người khai thác cảng hàng không"],answer:0},
+{chapterID:"ATHK",questionID:36,chapter:"ATHK",q:"133. Theo quy định tại TCCS 18, bán kính vòng quay của phương tiện khu bay được quy định như thế nào?",options:["A. Bán kính vòng quay lớn nhất","B. Bán kính vòng quay nhỏ nhất","C. Tùy theo từng loại phương tiện","D. Theo quy định của nhà sản xuất đối với từng loại phương tiện"],answer:1},
+{chapterID:"ATHK",questionID:37,chapter:"ATHK",q:"134. Theo quy định tại TCCS 18, đối với phương tiện khu bay dùng để kéo thì tốc độ kéo được quy định như thế nào?",options:["A. Tốc độ kéo phải phù họp với đầu kéo nhưng không vượt quá 20km/h","B. Tốc độ kéo phải phù hợp vói đầu kéo nhưng không vượt quá 32km/h","C. Theo hướng dẫn sử dụng của nhà sản xuất phương tiện dùng để kéo tại khu bay.","D. Tốc độ kéo phải phù họp với đầu kéo nhưng không vượt quá tốc độ quy định của người khai thác cảng đối với phương tiện hoạt động tại khu bay"],answer:1},
+{chapterID:"ATHK",questionID:38,chapter:"ATHK",q:"136. Theo quy định tại TCCS 18, cồng năng sử dụng đối với móc kéo của các phương tiện khu baynhư thế nào?",options:["A. Quy định của nhà sản xuất đối với từng loại phương tiện","B. Để lắp cáp hay cần kéo để khi gặp sự cố có thể kéo chúng về vị trí quy đinh.","C. Tất cả các phương tiện khu bayđều phải trang bị móc kéo để kéo khi cần.","D. Theo tiêu chuẩn kỹ thuật của Nhà sản xuất phương tiện"],answer:1},
+{chapterID:"ATHK",questionID:39,chapter:"ATHK",q:"137. Theo quy định tại TCCS 18, đối với các phương tiện chạy bằng điện, dung tích của thùng nhiên liệu được xác định như thế nào?",options:["A. Xác định bởi nhu cầu của người sử dụng phương tiện","B. Xác định bởi quy định của văn bản quy phạm pháp luật quy định về phương tiện chuyên ngành hàng không","C. Xác định của nhà sản xuất phương tiện","D. Xác định bởi yêu cầu của Người khai thác cảng hàng không"],answer:2},
+{chapterID:"ATHK",questionID:40,chapter:"ATHK",q:"138. Theo quy định tại TCCS 18, đối với các phương tiện khu baytự di chuyển được thì vị trí tay lái được quy định như thế nào?",options:["A. Phải có tay lái thuận (vị trí người lái ở bên trái theo chiều tiến của thiết bị) trừ trường hợp do tính chất của công việc đặc biệt thì xe có thể có tay lái nghịch hoặc tay lái giữa.","B. Vị trí tay lái căn cứ vào công năng sử dụng của phương tiện và do nhà sản xuât của phương tiện quy định","C. Phương tiện khu bayphải có tay lái thuận, căn cứ nhu cầu sử dụng của người khai thác phương tiện có thể thay đổi vị trí tay lái của phương tiện theo nhu cầu.","D. Tùy từng phương tiện để bố trí vị trí tay lại cho phù hợp."],answer:0},
+{chapterID:"ATHK",questionID:41,chapter:"ATHK",q:"143. Theo Tiêu chuẩn cơ sở 18, phương tiện chuyên dùng ừong ngành hàng không hoạt động ừên khu bay là?",options:["A. Phương tiện (bao gồm các loại xe, mooc, thiết bị không có bánh xe di chuyển được, có gắn động cơ hoặc không gắn động cơ), có kết cấu đặc thù hoặc được hoán cải, trang bi những thiết bỉ để thưc hiên viêc vẳn chuyển hành khách, hành ỉý, hàng hóa, bưu gửi bằng đường hàng không; các thiết bị hàng không phục vụ việc khai thác tàu bay và họat động bảo dưỡng tàu bay.","B. Phương tiện có thể tự di chuyển trên khu bay hoặc được hỗ ữợ di chuyển từ các phương tiện khác (bao gồm các loại xe, mooc, thiết bị không có bánh xe di chuyển được, có gắn động cơ hoặc không gắn động cơ) để phục vụ việc vận chuyên hành khách, hành lý, hàng hoá, bưu phâm, bưu kiện băng đường Hàng không và phục vụ công tác kỹ thuật cho tàu bay.","C. Phương tiện chuyên dùng, phương tiện đặc chủng trong ngành hàng không có thê tự di chuyên hay không tự di chuyên trên khu bay để phục vụ việc vận chuyển hành khách, hành lý, hàng hoá, bưu phẩm, bưu kiện bằng đường Hàng không; các thiết bị hàng không phục vụ việc khai thác tàu bay và họat động bảo dưỡng tàu bay."],answer:0},
+{chapterID:"ATHK",questionID:42,chapter:"ATHK",q:"147. Theo quy định tại Thông tư 29/2021/TT-BGTVT, thiết bị liên lạc gắn ữên phương tiện khi di chuyển trên khu bay được quy định tại tài liệu nào?",options:["A. Tài liệu khai thác cảng hàng không","B. Tài liệu khai thác phương tiện","C. Tài liệu khai thác sân bay","D. Cả a, b, c"],answer:2},
+{chapterID:"ATHK",questionID:43,chapter:"ATHK",q:"160. Những điều mà nhân viên kỹ thuật cần chú ý khi điều khiển Phương tiện khu bay tiếp cận tàu bay?",options:["A. Phương tiện khu bay phải chuyển động từ từ, cấm phanh đột ngột.","B. Phải có người hướng dẫn đối với các Phương tiện khu bay tiếp cận tàu bay theo hình thức lùi (trừ các Phương tiện khu bay có hệ thống tự động tiếp cận tàu bay).","C. a,b,c đều đúng."],answer:2},
+{chapterID:"ATHK",questionID:44,chapter:"ATHK",q:"161. Giấy phép hoạt động của các Phương tiện khu bay do cơ quan nào cấp?",options:["A. Cục Hàng không Việt Nam hoặc tổ chức được ủy quyền.","B. Tổ chức kiểm định xe cơ giới.","C. Cảng hàng không sân bay."],answer:0},
+{chapterID:"ATHK",questionID:45,chapter:"ATHK",q:"162. Tốc độ tối đa của các Phương tiện khu bay được quy định là bao nhiêu?",options:["A. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 35 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất.","B. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 25 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất.","C. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 20 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất."],answer:0},
+{chapterID:"ATHK",questionID:46,chapter:"ATHK",q:"166. Các Phương tiện khu bay chỉ được tiếp cận với tàu bay khi nào?",options:["A. Khi tàu bay đã dừng hẳn, đã chèn bánh.","B. Khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt.","C. Khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt, đèn nháy cảnh báo đã tắt."],answer:2},
+{chapterID:"ATHK",questionID:47,chapter:"ATHK",q:"168. Khi tàu bay đang nạp nhiên liệu, các Phương tiện khu bay không được khởi động động cơ đốt trong ở phạm vi nhỏ hơn bao nhiêu mét?",options:["A. 10 m","B. 15 m","C. 20 m."],answer:1},
+{chapterID:"ATHK",questionID:48,chapter:"ATHK",q:"169. Khi sử dụng xe kéo đẩy tàu bay, người điều khiển phải tuân thủ các giới hạn về tốc độ tối đa là bao nhiêu?",options:["A. 10 km/h khi đang kéo đẩy tàu bay; 25 km/h khi chạy không tải (không kéo, đẩy tàu bay).","B. 10 km/h khi đang kéo đẩy tàu bay; 20 km/h khi chạy không tải (không kéo, đẩy tàu bay).","C. 05 km/h khi đang kéo đẩy tàu bay; 15 km/h khi chạy không tải (không kéo, đẩy tàu bay)."],answer:0},
+{chapterID:"ATHK",questionID:49,chapter:"ATHK",q:"170. Khi dẫn tàu bay phải bảo đảm khoảng cách giửa xe dẫn và tàu bay là bao nhiêu?",options:["A. 150 đến 200 mét.","B. 100 đến 140 mét.","C. 300 đến 350 mét."],answer:0},
+{chapterID:"ATHK",questionID:50,chapter:"ATHK",q:"186. Hành vi nào sau đây không bị cấm trong quá trình kéo đẩy máy bay ?",options:["A. Dùng xe kéo máy bay để số lùi để kéo máy bay.","B. Để người ngồi trên thân cánh máy bay.","C. Kéo chậm hơn tốc độ quy định."],answer:2},
+{chapterID:"ATHK",questionID:51,chapter:"ATHK",q:"187. Xe thang có được cập bên máy bay khi đã hết khai thác trong ngày không ?",options:["A. Được, trong trường hợp sáng sớm hôm sau có khai thác tiếp.","B. Không được.","C. Được, nếu có sự chỉ đạo của ông giám đốc SAGS hoặc TIAGS."],answer:1},
+{chapterID:"ATHK",questionID:52,chapter:"ATHK",q:"188. Khi đang hoạt động phục vụ máy bay mà phương tiện, thiết bị hỏng hóc thì nhân viên kỹ thuật phải xử lý như thế nào?",options:["A. Đưa ngay trang thiết bị ra khỏi vị trí đang phục vụ và kéo về vị trí quy định để sửa chữa.","B. Báo cho Trực ban trưởng để TBT điều người đến kéo về nơi quy định.","C. Báo cáo ngay cho thủ trưởng đơn vị để được chỉ đạo giải quyết."],answer:0},
+{chapterID:"ATHK",questionID:53,chapter:"ATHK",q:"189. Việc rút chèn ra khỏi máy bay chỉ được thực hiện khi:",options:["A. Các trang thiết bị phục vụ đã rời khỏi máy bay.","B. Thợ máy của máy bay yêu cầu.","C. Tổ bay yêu cầu."],answer:0},
+{chapterID:"ATHK",questionID:54,chapter:"ATHK",q:"191. Thứ tự tiếp cận nào sau đây là đúng quy trình phục vụ?",options:["A. Xe thang, xe chở khách, xe nâng hàng, xe nạp nhiên liệu, xe khởi động, xe suất ăn, xe vệ sinh.","B. Xe thang, xe chở khách, xe nạp nhiên liệu, xe nâng hàng, xe vệ sinh, xe suất ăn, xe khởi động.","C. Xe nạp nhiên liệu, xe thang, xe chở khách, xe nâng hàng, xe khởi động, xe suất ăn, xe vệ sinh."],answer:0},
+{chapterID:"ATHK",questionID:55,chapter:"ATHK",q:"192. Người lái xe kéo đẩy máy bay phải được trang bị bộ đàm để có thể liên lạc với:",options:["A. Đài chỉ huy máy bay lăn","B. Đài chỉ huy máy bay lăn và thành viên tổ lái hoặc nhân viên kỹ thuật ngồi trên máy bay.","C. Phi công điều hành chuyến bay."],answer:1},
+{chapterID:"ATHK",questionID:56,chapter:"ATHK",q:"193. Trước khi đẩy máy bay ra khỏi bến đậu, người lái xe kéo đẩy máy bay phải thông báo cho ai?",options:["A. Thợ máy hoặc thành viên của tổ bay đang ngồi trên buồng lái.","B. Đội chỉ huy máy bay lăn","C. Không phải thông báo cho ai. Chỉ quan sát cẩn thận trước khi đẩy"],answer:1},
+{chapterID:"ATHK",questionID:57,chapter:"ATHK",q:"195. Động tác nào sau đây không được chấp nhận khi nạp dầu cho máy bay đang có khách ngồi trên:",options:["A. Tiếp viên đứng trực ở các cửa máy bay.","B. Tắt các tín hiệu cấm hút thuốc trên máy bay.","C. Xe thang máy bay phải có sẵn."],answer:1},
+{chapterID:"ATHK",questionID:58,chapter:"ATHK",q:"199. Khoảng cách an toàn tối thiểu phía trước một máy bay đang lăn là:",options:["A. 125m.","B. 175m.","C. 200m."],answer:2},
+{chapterID:"ATHK",questionID:59,chapter:"ATHK",q:"200. Xe kéo đẩy máy bay khi thực hiện việc kéo máy bay chỉ được chạy với tốc độ không quá:",options:["A. 10 km/h.","B. 15km/h.","C. 20 km/h."],answer:0},
+
+{chapterID:"ATHK_FULL",questionID:1,chapter:"ATHK FULL",q:"19. An ninh hàng không là việc . . . các biện pháp, nguồn nhân lực, trang bị, thiết bị để phòng ngừa, ngăn chặn và đối phó với các hành vi can thiệp bất hợp pháp vào hoạt động hàng không dân dụng, bảo vệ an toàn cho tàu bay, hàng hóa, hành khách, tổ bay và những người dưới mặt đất.",options:["A. Kết hợp.","B. Sử dụng.","C. Phối hợp."],answer:1},
+{chapterID:"ATHK_FULL",questionID:2,chapter:"ATHK FULL",q:"20. Điều nào sau đây là bị cấm :",options:["A. Chạy xe phía sau một máy bay đang đậu.","B. Xe kéo kéo 3 mâm hàng một lúc.","C. Bật đèn pha khi trời mù."],answer:2},
+{chapterID:"ATHK_FULL",questionID:3,chapter:"ATHK FULL",q:"21. Người nào bị phát hiện hút thuốc lá, tự ý đốt lửa trong khu vực sân đậu máy bay sẽ bị :",options:["A. Thu giữ thẻ kiểm soát an ninh.","B. Làm bản tự kiểm để trình bày lý do.","C. Thông báo cho cơ quan, đơn vị chủ quản biết để kỷ luật."],answer:0},
+{chapterID:"ATHK_FULL",questionID:4,chapter:"ATHK FULL",q:"22. Phương tiện, trang thiết bị có chân chống thủy lực thì phải sử dụng chân chống này khi nâng cao trên :",options:["A. 2,5 m.","B. 2,75m.","C. 3m ."],answer:0},
+{chapterID:"ATHK_FULL",questionID:5,chapter:"ATHK FULL",q:"23. Các phương tiện, trang thiết bị khi hoạt động trong khu vận chuyển phải cách đầu mút cánh của máy bay ít nhất là :",options:["A. 3,5m.","B. 5 m.","C. 7m ."],answer:1},
+{chapterID:"ATHK_FULL",questionID:6,chapter:"ATHK FULL",q:"24. Máy bay khi cần được kéo sang bến đậu khác để khai thác hoặc kéo về xưởng để sửa chữa thì phải:",options:["A. Lập kế hoạch trước và thông báo cho Trực ban trưởng- Cảng vụ.","B. Lập kế hoạch trước và thông báo cho Trực ban trưởng- Cảng vụ, Đội chỉ huy máy bay lăn để phối hợp.","C. Báo cáo cho ông giám đốc TIAGS biết."],answer:1},
+{chapterID:"ATHK_FULL",questionID:7,chapter:"ATHK FULL",q:"25. Container đựng hàng để trên sân đậu máy bay do chằng néo không cẩn thận bị gió đẩy va vào máy bay, gây thiệt hại. Trách nhiệm này thuộc về ai ?",options:["A. An ninh sân đậu. Do không quan sát bảo vệ","B. Trực ban trưởng. Do thiếu đôn đốc.","C. Cơ quan chủ quản. Do không chằng néo cẩn thận"],answer:2},
+{chapterID:"ATHK_FULL",questionID:8,chapter:"ATHK FULL",q:"26. Tốc độ tối đa của xe dẫn tàu bay trên đường lăn là bao nhiêu?",options:["A. 40 km/h;","B. 35 km/h;","C. 25 km/h."],answer:1},
+{chapterID:"ATHK_FULL",questionID:9,chapter:"ATHK FULL",q:"27. Tốc độ tối đa của xe dẫn tàu bay trong khu vực sân đỗ là bao nhiêu?",options:["A. 40 km/h;","B. 35 km/h;","C. 25 km/h."],answer:2},
+{chapterID:"ATHK_FULL",questionID:10,chapter:"ATHK FULL",q:"28. Chiều cao tối đa của phương tiện bị cấm chui qua cầu hành khách là bao nhiêu?",options:["A. Lớn hơn 3,2 mét;","B. Lớn hơn 3,90 mét;","C. 3,50 mét."],answer:1},
+{chapterID:"ATHK_FULL",questionID:11,chapter:"ATHK FULL",q:"29. Quy định nào sau đây là đúng?",options:["A. Xe đầu kéo không được kéo một lúc quá 03 mâm có hàng hoặc 05 mâm không có hàng đặt ở trên.","B. Xe đầu kéo không được kéo một lúc quá 03 mâm có hàng hoặc 04 mâm không có hàng đặt ở trên.","C. Xe đầu kéo không được kéo một lúc quá 04 mâm có hàng hoặc 05 mâm không có hàng đặt ở trên."],answer:1},
+{chapterID:"ATHK_FULL",questionID:12,chapter:"ATHK FULL",q:"30. Tim đường lăn được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:0},
+{chapterID:"ATHK_FULL",questionID:13,chapter:"ATHK FULL",q:"31. Khu vực tập kết các phương tiện được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:14,chapter:"ATHK FULL",q:"32. Khu vực cấm đậu được sơn kẻ màu gì?",options:["A. Màu vàng;","B. Màu đỏ;","C. Màu trắng."],answer:1},
+{chapterID:"ATHK_FULL",questionID:15,chapter:"ATHK FULL",q:"33. Khi tàu bay đang đậu, những phương tiện không trực tiếp tham gia phục vụ tàu bay thì phải đỗ cách xa tàu bay tối thiểu bao nhiêu mét?",options:["A. 20 mét;","B. 15 mét;","C. 10 mét."],answer:1},
+{chapterID:"ATHK_FULL",questionID:16,chapter:"ATHK FULL",q:"34. Các Phương Tiện Khu Bay chỉ được phép tiếp cận máy bay khi",options:["A. Máy bay đã dừng hẳn, thợ máy mặt đất đã nối liên lạc với Cơ trưởng","B. Máy bay được chèn bánh, đèn báo hiệu các động cơ chính đã ngừng hoạt động","C. Tất cả các quy định trên"],answer:2},
+{chapterID:"ATHK_FULL",questionID:17,chapter:"ATHK FULL",q:"35. Khi tiếp cận máy bay các Phương Tiện Khu Bay phải",options:["A. Vào đúng trình tự, vị trí của mình theo sơ đồ phục vụ của từng loại máy bay cụ thể","B. Không làm ảnh hưởng đến hoạt động của các Phương Tiện Khu Bay khác, đặc biệt không dừng đỗ gây cản trở lối thoát hiểm của máy bay và xe xăng dầu","C. Tất cả các quy định trên"],answer:2},
+{chapterID:"ATHK_FULL",questionID:18,chapter:"ATHK FULL",q:"36. Các nhân viên vận hành Phương Tiện Khu Bay khi làm việc trên sân đỗ phải:",options:["A. Nắm chắc mọi quy tắc về ATLĐ và quy định phòng chống cháy nổ của đơn vị","B. Có trang phục làm việc đúng với quy định của đơn vị","C. Tất cả các quy định trên"],answer:2},
+{chapterID:"ATHK_FULL",questionID:19,chapter:"ATHK FULL",q:"37. Nhân viên vận hành Phương Tiện Khu Bay làm việc trên khu bay phải mặc áo có gắn dải phản quang khi:",options:["A. Làm việc ban đêm hoặc thời tiết xấu","B. Bất cứ lúc nào cũng phải mặc quần áo bảo hộ lao động, đi ủng, đeo kính và dùng bịt tai","C. Cả 2 yêu cầu trên"],answer:0},
+{chapterID:"ATHK_FULL",questionID:20,chapter:"ATHK FULL",q:"38. Giám sát an ninh hàng không là việc . . . con người, động vật, trang thiết bị kỹ thuật để quản lý, theo dõi nhằm phát hiện, ngăn chặn các hành vi vi phạm hoặc có dấu hiệu vi phạm về an ninh hàng không.",options:["A. Sử dụng riêng lẻ.","B. Sử dụng kết hợp.","C. Sử dụng riêng lẻ hoặc kết hợp."],answer:2},
+{chapterID:"ATHK_FULL",questionID:21,chapter:"ATHK FULL",q:"39. Tổ chức Hàng không dân dụng quốc tế có tên viết tắt là:",options:["A. ICAO.","B. IMO.","C. SARPs."],answer:0},
+{chapterID:"ATHK_FULL",questionID:22,chapter:"ATHK FULL",q:"40. Việt Nam đã trở thành thành viên chính thức của Tổ chức Hàng không dân dụng quốc tế hay chưa:",options:["A. Đã là thành viên chính thức.","B. Đã là thành viên dự bị.","C. Việt nam không tham gia tổ chức này."],answer:0},
+{chapterID:"ATHK_FULL",questionID:23,chapter:"ATHK FULL",q:"41. Nhà chức trách về an ninh hàng không Việt Nam là:",options:["A. Giao thông vận tải.","B. Cục Hàng không Việt Nam.","C. Bộ Công an."],answer:1},
+{chapterID:"ATHK_FULL",questionID:24,chapter:"ATHK FULL",q:"42. Địa bàn hoạt động của lực lượng an ninh hàng không dân dụng bao gồm:",options:["A. Cảng hàng không, sân bay; Cơ sở cung cấp dịch vụ không lưu; tàu bay.","B. Cơ sở sản xuất, bảo dưỡng. sửa chữa tàu bay, thiết bị bay; Cơ sở xử lý hàng hóa, thư, bưu phẩm, bưu kiện; Cơ sở cung cấp dịch vụ hàng không khác.","C. Cả 2 đáp án trên."],answer:2},
+{chapterID:"ATHK_FULL",questionID:25,chapter:"ATHK FULL",q:"43. Lực lượng nào không có trong tổ chức lực lượng an ninh hàng không của cảng hàng không, sân bay:",options:["A. Lực lượng bảo vệ.","B. Lực lượng an ninh cơ động.","C. Lực lượng an ninh kiểm soát."],answer:0},
+{chapterID:"ATHK_FULL",questionID:26,chapter:"ATHK FULL",q:"44. Công ước Tokyo 1963, Công ước Hague 1970, Công ước Montreal 1971 điều chỉnh về các hành vị được xem là tội phạm thực hiện đối với.",options:["A. Tàu bay đang bay.","B. Tàu bay đỗ trên mặt đất.","C. Tàu bay phục vụ cho quân sự."],answer:0},
+{chapterID:"ATHK_FULL",questionID:27,chapter:"ATHK FULL",q:"45. Văn bản pháp quy cao nhất của Việt Nam về an ninh hàng không là:",options:["A. Luật Hàng không dân dụng Việt Nam.","B. Nghị định số 92/2015/NĐ-CP, ngày 13/10/2015 của Chính phủ về an ninh hàng không.","C. Thông tư số 01/2016/TT-BGTVT, ngày 01/02/2016 của Bộ trưởng Bộ GTVT Quy định chi tiết Chương trình An ninh hàng không và kiểm soát chất lượng An ninh hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:28,chapter:"ATHK FULL",q:"46. Ưu tiên hàng đầu khi đối phó với hành vi can thiệp bất hợp pháp vào hoạt động hàng không dân dụng:",options:["A. Tính mạng con người.","B. Tính mạng con người và an toàn cho tàu bay.","C. Hạn chế tối đa thiệt hại về tài sản."],answer:1},
+{chapterID:"ATHK_FULL",questionID:29,chapter:"ATHK FULL",q:"47. Những nguy cơ đe dọa hiện hữu là thách thức lớn đối với hoạt động hàng không dân dụng là:",options:["A. Khủng bố, chiến tranh.","B. Xung đột vũ trang, mất ổn định chính trị, xã hội.","C. Cả 2 đáp án trên."],answer:2},
+{chapterID:"ATHK_FULL",questionID:30,chapter:"ATHK FULL",q:"48. Khu vực hạn chế là:",options:["A. Khu vực của cảng hàng không, sân bay.","B. Khu vực có các công trình, trang bị, thiết bị hàng không mà việc ra, vào, hoạt động tại đó phải tuân thủ các quy định của cơ quan Nhà nước có thẩm quyền và được kiểm tra, giám sát an ninh hàng không.","C. Cả 2 đáp án trên."],answer:2},
+{chapterID:"ATHK_FULL",questionID:31,chapter:"ATHK FULL",q:"49. Biện pháp nào là biện pháp đảm bảo an ninh khu vực hạn chế:",options:["A. Thiết lập khu vực hạn chế; Kiểm soát đối với người, phương tiện ra, vào khu vực hạn chế bằng thẻ kiểm soát an ninh; Sử dụng hệ thống camera giám sát để kiểm soát những khu vực trọng yếu.","B. Xây dựng hàng rào an ninh bao quanh khu vực hạn chế, đảm bảo đủ ánh sáng, sử dụng các trang thiết bị, nhanh chóng phát hiện sự xâm nhập từ bên ngoài vào trong khu vực hạn chế, tuần tra kiểm soát các khu vực quan trọng.","C. Cả 2 đáp án trên."],answer:2},
+{chapterID:"ATHK_FULL",questionID:32,chapter:"ATHK FULL",q:"50. Thẻ kiểm soát an ninh cảng hàng không, sân bay là:",options:["A. Tài liệu cấp cho người và phương tiện được phép vào và hoạt động tại khu vực hạn chế liên quan của cảng hàng không sân bay.","B. Tài liệu cấp cho người được phép vào và hoạt động tại khu vực hạn chế liên quan của cảng hàng không sân bay.","C. Tài liệu xác nhận phương tiện được phép vào và hoạt động trong khu vực hạn chế liên quan của cảng hàng không sân bay."],answer:1},
+{chapterID:"ATHK_FULL",questionID:33,chapter:"ATHK FULL",q:"51. Giấy phép kiểm soát an ninh cảng hàng không, sân bay là:",options:["A. Tài liệu cấp cho người và phương tiện được phép vào và hoạt động tại khu vực hạn chế liên quan của cảng hàng không sân bay.","B. Tài liệu cấp cho người được phép vào và hoạt động tại khu vực hạn chế liên quan của cảng hàng không sân bay.","C. Tài liệu xác nhận phương tiện được phép vào và hoạt động trong khu vực hạn chế liên quan của cảng hàng không sân bay."],answer:2},
+{chapterID:"ATHK_FULL",questionID:34,chapter:"ATHK FULL",q:"52. Cán bộ, nhân viên khi ra, vào làm việc tại Công ty:",options:["A. Phải đeo thẻ KSAN do Cục HKVN, Cảng vụ cấp.","B. Phải đeo thẻ KSAN nội bộ theo quy định.","C. Chỉ cần mang thẻ KSAN trong người, khi có yêu cầu kiểm tra mới phải xuất trình."],answer:1},
+{chapterID:"ATHK_FULL",questionID:35,chapter:"ATHK FULL",q:"53. Khi qua soi chiếu an ninh, CBCNV cần:",options:["A. Tuân thủ theo chỉ dẫn của nhân viên ninh như: cởi áo khoác, mũ, vật dụng cá nhân và các đồ vật khác mang theo người để trong khay đưa qua máy soi trước khi đi qua cổng từ.","B. Phải được lục soát kỹ người, đồ vật tại buồng kiểm thể.","C. Có thể để trong người một số đồ dùng cá nhân như: điện thoạt, chìa khóa…"],answer:0},
+{chapterID:"ATHK_FULL",questionID:36,chapter:"ATHK FULL",q:"54. Theo quy định của Thông tư 29/2021/TT-BGTVT, khu bay có nghĩa là:",options:["A. Khu vực cất hạ cánh và lăn của tàu bay.","B. Khu vực cất hạ cánh, lăn của tàu bay và nhà ga.","C. Phần sân bay dùng cho tàu bay cất cánh, hạ cánh và ỉăn bao gồm cả khu cất hạ cánh và các sân đễ tàu bay.","D. Phần sân bay dùng cho tàu bay cất cánh, hạ cánh, đường lăn, sân đỗ và nhà ga."],answer:2},
+{chapterID:"ATHK_FULL",questionID:37,chapter:"ATHK FULL",q:"55. Theo quy định của Thông tư 29/2021/TT-BGTVT, vị trí chờ lên đường cất hạ cánh (Runway - holding position) nằm ở đâu?",options:["A. Là vị trí chờ để cất cánh.","B. Vị trí được lựa chọn trên đường cất hạ cánh.","C. Vị trí được lựa chọn ữên đường cất hạ cánh, đường lăn, sân đỗ.","D. Vị trí được lựa chọn trên đường lăn hoăc khu vực tới hạn của hệ thống thiết bị ILS/MLS."],answer:3},
+{chapterID:"ATHK_FULL",questionID:38,chapter:"ATHK FULL",q:"56. Theo quy định của Thông tư 29/2021/TT-BGTVT, khu vực an toàn tại vị trí đỗ tàu bay (Aicraft Safety Area on the Parking):",options:["A. Là khu vực hạn chế nằm trong ranh giới có đường kẻ màu đen xung quanh khu vực đỗ của tàu bay.","B. Là khu vực hạn chế nằm trong ranh giới có đường kẻ màu vàng xung quanh khu vực đỗ của tàu bay.","C. Là khu vực hạn chế nằm trong ranh giói có đường kẻ mảu đỏ, viền đen xung quanh khu vực đỗ của tàu bay.","D. Là khu vực hạn chế nằm trong ranh giới có đường kẻ màu đỏ xung quanh khu vực đễ của tàu bay."],answer:3},
+{chapterID:"ATHK_FULL",questionID:39,chapter:"ATHK FULL",q:"57. Theo quy định tại Thông tư 29/2021/TT-BGTVT, các thiết bị, phương tiện chuyên ngành hàng không được sản xuất, lắp ráp cải tiến tại Việt Nam phải được cơ quan nào cấp giấy chứng nhận đủ điều kiện kỹ thuật để đưa vào khai thác?",options:["A. Người khai thác cảng hàng không, sân bay,","B. Cục Hàng không Việt Nam.","C. Cảng vụ hàng không.","D. Bộ Giao thông vận tải."],answer:1},
+{chapterID:"ATHK_FULL",questionID:40,chapter:"ATHK FULL",q:"58. Theo quy định tại Thông tư 29/2021/TT-BGTVT, chu kỳ kiểm định phương tiện chuyên ngành hàng không được quy định như thế nào?",options:["A. Phương tiện chuyên ngành hàng không được kiểm định theo chu kỳ 12 tháng kể từ ngày được cấp biển số hoặc từ lần kiểm định trước.","B. Phương tiện chưa qua sử dụng, chu kỳ kiểm định ỉần đầu là 24 tháng kể từ ngày được cấp biển số; Phương tiện đã qua sử dụng, chu kỳ kiểm định là 12 tháng, kể từ ngày được cấp biển số hoặc lần kiểm định trước.","C. Tùy theo tần xuất phục vụ của loại phương tiện chuyên ngành hàng không đó","D. Tùy từng loại phương tiện chuyên ngành hàng không để quy định chu kỳ kiêm định cụ thê cho từng loại."],answer:1},
+{chapterID:"ATHK_FULL",questionID:41,chapter:"ATHK FULL",q:"59. Theo quy định tại Thông tư 29/2021/TT-BGTVT, việc kiểm tra chất lượng an toàn kỹ thuật, bảo vệ môi trường phương tiện chuyên ngành hàng không do cơ quan, đơn vị nào đảm nhiệm?",options:["A. Cục Hàng không Việt Nam tổ chức thực hiện hoặc chỉ định cho tể chức đủ năng lực thực hiện.","B. Cục Đăng kiểm Việt Nam tổ chức thực hiện hoặc chỉ định cho tổ chức đủ năng lực thực hiện.","C. Hội đồng kiểm định an toàn, kỹ thuật, môi trường của đơn vị quản lý khai thác hoặc cơ sở kiểm định kỹ thuật phù hợp với loại phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay, .","D. Cả a và b."],answer:0},
+{chapterID:"ATHK_FULL",questionID:42,chapter:"ATHK FULL",q:"60. Theo quy định tại Thông tư 29/2021/TT-BGTVT, phương tiện chuyên ngành hàng không, sân bay bị đình chỉ hoạt động trong trường hợp nào?",options:["A. Không được kiểm định hoặc không đáp ứn| yêu cầu khai thác theo tài liệu kỹ thuật của phương tiện hoặc gây sự cố tai nạn hàng không.","B. Không đáp ứng tiêu chuẩn khai thác an toàn, kỹ thuật, môi trường.","C. Gây sự cố, tai nạn hàng không.","D. a và b"],answer:0},
+{chapterID:"ATHK_FULL",questionID:43,chapter:"ATHK FULL",q:"61. Theo quy định tại Thông tư 29/2021/TT-BGTVT, quy cách biển số hoạt động của phương tiện chuyên ngành hoạt động tại cảng hàng không, sân bay, quy định chữ sô đâu chỉ đơn vị quản lý khai thác phương tiện, chữ sô 2 trong biên sô là phương tiện của cơ quan, đơn vị nào?",options:["A. Tổng công ty Hàng không Việt Nam.","B. Các Hãng hàng không","C. Người khai thác cảng hàng không, sân bay, .","D. Các đơn vị cung cấp dịch vụ hàng không."],answer:1},
+{chapterID:"ATHK_FULL",questionID:44,chapter:"ATHK FULL",q:"62. Theo quy định tại Thông tư 29/2021/TT-BGTVT, quy cách biển số hoạt động của phương tiện chuyên ngành hoạt động tại cảng hàng không, sân bay, quy định chữ sô đầu chỉ đơn vị quản lý khai thác phương tiện: Chữ số 1 trong biển số là phương tiện của cơ quan, đơn vị nào?",options:["A. Tổng công ty Cảng hàng không Việt Nam.","B. Các Hãng hàng không.","C. Người khai thác cảng hàng không, sân bay.","D. Các đơn vị cung cấp dịch vụ hàng không."],answer:2},
+{chapterID:"ATHK_FULL",questionID:45,chapter:"ATHK FULL",q:"63. Theo quy định tại Thông tư 29/2021/TT-BGTVT, việc khai thác phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay, phải tuân thủ quy trình vận hành tiêu chuẩn của ai?",options:["A. Người sản xuất, người khai thác phương tiện, tài liệu hướng dẫn của ICAO nhằm bảo đảm an toàn trong quả trình khai thác.","B. Người sản xuất, người khai thác phương tiện, tài liệu hướng dẫn của IATA nhằm bảo đảm an toàn trong quá trình khai thác.","C. Người khai thác Cảng hàng không, sân bay, nhằm bảo đảm an toàn trong quá trình khai thác.","D. Người sản xuất, người khai thác cảng hàng không, sân bay, , tài liệu hướng dẫn nhằm bảo đảm an toàn trong quá trình khai thác."],answer:1},
+{chapterID:"ATHK_FULL",questionID:46,chapter:"ATHK FULL",q:"64. Theo quy định tại Thông tư 29/2021/TT-BGTVT, quy định cơ quan, đơn vị nào ban hành hướng dẫn yêu cầu tối thiểu đối với việc khai thác phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay, :",options:["A. Người khai thác phương tiện hoặc Người quản lý phương tiện.","B. Cục Hàng không Việt Nam","C. Cảng vụ hàng không Việt Nam","D. Người khai thác cảng hàng không, sân bay,"],answer:1},
+{chapterID:"ATHK_FULL",questionID:47,chapter:"ATHK FULL",q:"65. Theo quy định tại Thông tư 29/2021/TT-BGTVT, quy định kích thước, màu sắc, biển số đăng ký, chữ và số trên biển số đăng ký của phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay, được làm theo quy định nào?",options:["A. Kích thước, biển số đăng ký xe ô tô của cơ quan Nhà nước.","B. Kích thước, biển số đãng ký phương tiện theo quy định riêng của ngành Hàng không.","C. Kích thước, biển số đăng ký phương tiện theo quy đinh của Tổ chức 13ang không dân dụng quốc tế (ICAO)","D. a hoặc c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:48,chapter:"ATHK FULL",q:"66. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu khai thác kỹ thuật của phương tiện bao gôm:",options:["A. Nhật ký kỹ thuật, biên bản kỹ thuật, tài liệu thống kê kỹ thuật, báo cáo kỹ thuật, báo cáo đột xuất","B. Tài liệu hướng dẫn và tài liệu khai thác kỹ thuật.","C. Lý lịch và hồ sơ cải tạo, thay đổi kiểu loại.","D. Cả a, b, c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:49,chapter:"ATHK FULL",q:"67. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu hướng dẫn kỹ thuật là:",options:["A. Tài liệu do người chế tạo và người khai thác phương tiện ban hành để hướng dân việc thực hiện các tiêu chuẩn kỹ thuật trong quá trình thiết kế, bảo trì phương tiện.","B. Tài liệu do người chế tạo hoặc người khai thác phương tiện ban hành để hướng dẫn việc thực hiên các tiêu chuẩn kỹ thuât trong quá trình thiết kế, chế tạo, khai thác, bảo trì phương tiện.","C. Tài liệu đưa ra những thông tin kỹ thuật cần thiết, những quy định, hướng dẫn cụ thể cho người điều khiển, vận hành phương tiện, trang thiết bị.","D. Tài liệu nêu rõ cấu tạo, nguyên lý làm việc của phương tiện, trang thiết bị."],answer:1},
+{chapterID:"ATHK_FULL",questionID:50,chapter:"ATHK FULL",q:"68. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tài liệu hướng dẫn kỹ thuật bao gồm:",options:["A. Tài liệu khai thác kỹ thuật và lý lịch của phương tiện","B. Tài liệu hướng dẫn sử dụng, tài liệu hướng dẫn bảo trì, tài liệu huấn luyện kỹ thuật.","C. Tài liệu hướng dẫn bảo dưỡng, sửa chữa","D. Tài liệu hướng dẫn kỹ thuật của nhà sản xuất phương tiện"],answer:1},
+{chapterID:"ATHK_FULL",questionID:51,chapter:"ATHK FULL",q:"69. Theo quy định tại Thông tư 29/2021/TT-BGTVT, lý lịch kỹ thuật của phương tiện do ai xây dựng?",options:["A. Người quản lý, khai thác phương tiện.","B. Người sản xuất phương tiện.","C. Người khai thác cảng hàng không.","D. Người sử dụng phương tiện"],answer:0},
+{chapterID:"ATHK_FULL",questionID:52,chapter:"ATHK FULL",q:"70. Theo quy định của Thông tư 29/2021/TT-BGTVT, tổ chức nào đề nghị cấp giấy phép nhân viên điều khiển, vận hành thiết bị hàng không, phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay?",options:["A. Tổ chức quản lý nhân viên.","B. Cá nhân người lao động.","C. Doanh nghiệp hàng không","D. Nhân viên hàng không"],answer:0},
+{chapterID:"ATHK_FULL",questionID:53,chapter:"ATHK FULL",q:"71. Theo quy định của Thông tư 29/2021/TT-BGTVT, đối với giấy phép lần đầu, sau bao nhiêu ngày kể từ ngày nhận đủ hồ sơ theo quy định, Cục Hàng không Việt Nam thẩm định hồ sơ, tổ chức kiểm tra, quyết định cấp giấy phép, hoặc thông báo bằng văn bản lý do từ chối cấp giấy phép cho người đề nghị?",options:["A. 10 ngày","B. 15 ngày.","C. 20 ngày.","D. 30 ngày."],answer:2},
+{chapterID:"ATHK_FULL",questionID:54,chapter:"ATHK FULL",q:"72. Theo quy định của Thông tư 29/2021/TT-BGTVT, Cục Hàng không Việt Nam cấp lại giấy phép bị mất, hỏng trong thời hạn bao nhiêu ngày kể từ ngày nhận đủ hồ sơ theo quy định?",options:["A. 03 ngày.","B. 05 ngày.","C. 07 ngày.","D. 10 ngày."],answer:1},
+{chapterID:"ATHK_FULL",questionID:55,chapter:"ATHK FULL",q:"73. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đường giao thông nội bộ trong cảng Hàng không là?",options:["A. Đường để các phương tiện, trang thiết bị di chuyển trong khu bay, không bao gồm tàu bay.","B. Đường giao thông trong ranh giới cảng hàng không, không bao gồm đường giao thông do địa phương quản lý và đường giao thông nội bộ trong sân bay.","C. Đường để các phương tiện, trang thiết bị di chuyển trong khu bay, bao gồm cả tàu bay.","D. a và b"],answer:1},
+{chapterID:"ATHK_FULL",questionID:56,chapter:"ATHK FULL",q:"74. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đường giao thông trong cảng 14ang không, sân bay, bao gôm những khu vực nào?",options:["A. Đường giao thông nội bộ trong sân bay và đường giao thông nội bộ trong cảng hàng không","B. Đường giao thông trong và ngoài khu bay","C. Theo quy định của từng cảng 14ang không","D. Đường giao thông trong và ngoài khu đường lăn, sân đỗ"],answer:0},
+{chapterID:"ATHK_FULL",questionID:57,chapter:"ATHK FULL",q:"75. Theo quy định tại Thông tư 29/2021/TT-BGTVT, giao thông trong sân bay phải tuân thủ theo quy định nào?",options:["A. Tài liệu khai thác sân bay","B. Quy định của pháp luật về giao thông","C. Quy định của người khai thác cảng hàng không","D. Tài liệu khai thác cảng hàng không, sân bay,"],answer:0},
+{chapterID:"ATHK_FULL",questionID:58,chapter:"ATHK FULL",q:"76. Theo quy định tại Thông tư 29/2021/TT-BGTVT, giao thông ngoài sân bay được thực hiện theo quy định nào?",options:["A. Theo quy định của người khai thác cảng hàng không, sân bay.","B. Theo quy định của Pháp luật về Giao thông đường bộ.","C. Theo quy định của pháp luật về giao thông đường bộ và quy định riêng của từng cảng hàng không, sân bay,","D. Theo quy định về an toàn của cảng 15ang không, sân bay,"],answer:1},
+{chapterID:"ATHK_FULL",questionID:59,chapter:"ATHK FULL",q:"77. Theo quy định tại Thông tư 29/2021/TT-BGTVT, cơ quan nào thực hiện chức năng kiểm tra, giám sát việc tô chức thực hiện hệ thống quản lý an toàn sân bay?",options:["A. Cục Hàng không Việt Nam","B. Cảng vụ hàng không","C. Người khai thác cảng 15ang không, sân bay,","D. a và b"],answer:3},
+{chapterID:"ATHK_FULL",questionID:60,chapter:"ATHK FULL",q:"78. Theo quỵ định tại Thông tư 29/2021/TT-BGTVT, khi điều khiển phương tiện đi lại trên đường cât hạ cánh, đường lăn, sân đô tàu bay gặp sự cô hoặc bị hư hỏng, người điêu khiên,vận hành phương tiện phải xử lý thế nào?",options:["A. Liên lạc với thợ sửa chữa để khắc phục sự cố, kịp thời phục vụ bay, nhanh chóng đưa phương tiện về các bãi tập kết để khắc phục sự cố.","B. Nhanh chóng đưa phương tiện ra khỏi khu vực phục vụ tàu bay. Trường hợp hư hỏng nhẹ, cho phép khắc phục ngay tại các bãi tập kết, các trường họp khác phải đưa về xưởng của đơn vị để sửa chữa.","C. Báo ngay cho kiểm soát viên không lưu và nhanh chóng đưa phương tiện ra khỏi khu vực đang hoạt động để sửa chữa, không được tiến hành sửa chữa trên đường lưu thông của tàu bay và các phương tiện khác.","D. a và b"],answer:2},
+{chapterID:"ATHK_FULL",questionID:61,chapter:"ATHK FULL",q:"79. Theo quy đinh tại Thông tư 29/2021/TT-BGTVT, quy định khi tiếp cận tàu bay, nhân viên vận hành trang thiết bị cần tuân theo các quy tắc nào sau đây?",options:["A. Đỗ đúng vị trí theo sơ đồ phục vụ của từng loại tàu bay và không được ảnh hường đến hoạt động của các phương tiện khác hoạt động trên khu bay, có người hướng dẫn đối với các phương tiện tiếp cận tàu bay theo hình thức lùi và tiếp cận tàu bay theo đúng thứ tự quy định.","B. Chỉ được phép tiếp cận khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tẳt; đỗ đúng vị trí theo sơ đồ phục vụ của từng loại phương tiện, trang thiết bị phục vụ tàu bay.","C. Chỉ được phép tiếp cận khỉ tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt, đèn nháy cảnh báo đã tắt; trừ trường hợp tàu bay phải có phương tiện hỗ trợ mới tắt được động cơ; tiếp cận tàu bay theo đúng thứ tự quy định; đỗ đúng vị trí theo sơ đồ phục vụ của từng loại tàu bay và không được ảnh hưởng đến hoạt động của các phương tiện khác hoạt động trên khu bay; có người hướng dẫn đối với các phương tiện tiếp cận tàu bay theo hình thức lùi, trừ các phương tiện có hệ thống tự động tiếp cận tàu bay.","D. a và b"],answer:2},
+{chapterID:"ATHK_FULL",questionID:62,chapter:"ATHK FULL",q:"80. Theo quy định tại Thông tư 29/2021/TT-BGTVT, sân đỗ tàu bay (Apron) đựợc định nghĩa:",options:["A. Là khu vực được xác định trong sấn bay dành cho tàu bay đỗ để phục vụ hành khách lên, xuống; xếp, dỡ hành lý, bưu gửi, hàng hoá; tiếp nhiên liệu; cung ứng suất ăn; phục vụ kỹ thuật hoặc bảo dưỡng tàu bay.","B. Là khu vực được xác định trong sân bay dành cho tàu bay đỗ để phục vụ hành khách lên, xuống; xếp, dỡ hành lý, thư, bưu phẩm, bưu kiện, hàng hoá.","C. Là khu vực được xác định trong sân bay dành cho tàu bay đỗ để tiếp nhận nhiên liệu; cung ứng suất ăn; phục vụ kỹ thuật hoặc bảo dưỡng tàu bay.","D. Là khu vực được xác định tại khu vực hạn chế càng hàng không sân bay sử dụng cho việc đỗ tàu bay phục vụ vận tải hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:63,chapter:"ATHK FULL",q:"81. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đường lăn, sân đỗ tàu bay phải đảm bảo:",options:["A. Đầy đủ đèn chỉ dẫn cho tàu bay tự lăn ra, vào vị trí đỗ từ đường cất hạ cánh an toàn theo tiêu chuân sân bay dân dụng.","B. Đầy đủ sơn tín hiệu, biển báo cho tàu bay tự lăn ra, vào vị trí đỗ từ đường cất hạ cánh an toàn theo tiêu chuẩn sân bay dân dụng.","C. Đầy đủ sơn tín hiệu, biển báo hoặc đèn chỉ dẫn cho tàu bay tự vận hành lăn an toàn vào vị trí theo tiêu chuẩn."],answer:2},
+{chapterID:"ATHK_FULL",questionID:64,chapter:"ATHK FULL",q:"82. Theo quy định tại Thông tư 29/2021/TT-BGTVT, đối với cảng hàng không, sân bay, chưa đáp ứng đây đủ tiêu chuẩn cho việc tàu bay tự di chuyển an toàn vào vị trí đỗ thì:",options:["A. Bắt buộc phải sử dụng xe dẫn đường tàu bay (follow-me) để dẫn dắt tàu bay vào vị trí đỗ.","B. Người khai thác cảng hàng không, sân bay, có trách nhiệm cung cấp miễn phí dịch vụ xe dẫn đường tàu bay để dẫn dắt tàu bay vào vi trí đỗ.","C. Người khai thác cảng hàng không, sân bay, chỉ cung cấp dịch vụ xe dẫn dường tàu bay vào vị trí đỗ theo yêu cầu của người khai thác tàu bay."],answer:1},
+{chapterID:"ATHK_FULL",questionID:65,chapter:"ATHK FULL",q:"83. Theo qui định của Luật HKDD Việt Nam, cơ quan nào thực hiện chức năng quản lý nhà nước vê hàng không dân dụng tại cảng hàng không, sân bay ?",options:["A. Cục Hàng không Việt Nam","B. Người khai thác cảng hàng không","C. Cảng vụ hàng không","D. Hãng hàng không"],answer:2},
+{chapterID:"ATHK_FULL",questionID:66,chapter:"ATHK FULL",q:"84. Theo quy định tại Luật HKDD Việt Nam, nhân viên hàng không là:",options:["A. Những người hoạt động liên quan trực tiếp đến an ninh hàng không, khai thác tàu bay, vận chuyên hàng không, hoạt động bay, có giấy phép, chứng chỉ chuyên môn phù họp do Bộ Giao thông vận tải cấp hoặc công nhận.","B. Những người hoạt động liên quan trực tiếp đến bảo đảm an toàn hàng không, khai thác tàu bay, vận chuyên hàng không, hoạt động bay, có giấy phép, chứng chỉ chuyên môn phù họp do Bộ Giao thông vận tải cấp hoặc công nhận.","C. Những người hoạt động liên quan trực tiếp đến bảo đảm an toàn hàng không, an ninh hàng không, khai thác tàu bay, vận chuyển hàng không, hoạt động bay, có giấy phép, chứng chỉ chuyên môn phù hợp do Bộ Giao thông vận tải cấp hoặc công nhận và phải được ký hợp đồng lao động băng văn bản với tổ chức sử dụng lao động.","D. a và b"],answer:2},
+{chapterID:"ATHK_FULL",questionID:67,chapter:"ATHK FULL",q:"85. Đối tượng phải được kiểm tra, soi chiếu, giám sát an ninh hàng không trước khi lên tàu bay theo quy định của Luật HKDD Việt Nam?",options:["A. Tất cả nhân viên hàng không liên quan đến hoạt động bay, phi công, tiếp viên.","B. Hành khách, thành viên tổ bay, người phục vụ chuyến bay, người khác có liên quan, hành lý, hàng hoá, bưu gửi và các vật phẩm khác.","C. Nhân viên hàng không, hành khách và thành viên tổ bay, người phục vụ chuyến bay.","D. a và c."],answer:1},
+{chapterID:"ATHK_FULL",questionID:68,chapter:"ATHK FULL",q:"86. Theo quy định tại Thông tư 53 về môi trường, ừong hoạt động hàng không dân dụng, các giải pháp giảm thiêu khí thải được áp dụng đôi với phương tiện, trang thiết bị hoạt động tại cảng hàng không, sân bay, bao gôm:",options:["A. Thực hiện bảo dưỡng hệ thống phương tiện, trang thiết bị đúng chế độ quy định; Hạn chế hoạt động của động cơ khỉ phương tiện, thiết bị tạm dừng hoạt động; Áp dụng tốc độ, chế độ tăng tốc hợp lý khi phương tiện, thiết bị hoạt động tại cảng hàng không, sân bay,","B. Thiết lập các tuyến giao thông nội cảng họp lý nhằm giảm thiểu quãng đường hoạt động của phương tiện.","C. Thiết lập các tuyến giao thông tại khu vực hạn chế của Cảng hàng không, sân bay, phù hợp với phương tiện chuyên ngành hàng không nhăm giảm thiểu quãng đường hoạt động của phương tiện.","D. a, và c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:69,chapter:"ATHK FULL",q:"87. Theo quy định tại Thông tư 53 về môi trường, ừong hoạt động hàng không dân dụng, các biện pháp giảm thiểu ô nhiễm môi trường nước trong quá trình khai thác, bảo dưỡng hệ thống phương tiện và trang thiết bị, bao gồm:",options:["A. Ngăn chặn rò rỉ trực tiếp hoặc gián tiếp nhiên liệu, dầu mỡ, hóa chất ra khu vực Cảng hàng không, sân bay, trong quá trình bảo dưỡng tàu bay, trong quá trình khai thác, bảo dưỡng hệ thống phưomg tiện và trang thiêt bị.","B. Phân tách dầu mỡ lẫn trong nước thải từ hoạt động bảo dưỡng phương tiện, trang thiết bị trước khi xả thải vào hệ thống thu gom, xử lý nước thải của cảng hàng không, sân bay, thực hiện bảo dưỡng, rửa tàu bay, phương tiện, trang thiết bị tại khu vực cỏ hệ thống thu gom và phân tách dầu mỡ khỏi nước thải.","C. Ngăn chặn rò rỉ ra khu vực cảng hàng không, sân bay, trong quá trình bảo dưỡng tàu bay, phương tiện và trang thiết bị; Phân tách dâu mỡ lân trong nước thải từ hoạt động bảo dưỡng phương tiện, trang thiết bị trước khi xả thải vào hệ thông thu gom, xử lý nước thải của cảng hàng không, sân bay; Thực hiện bảo dưỡng, rửa tàu bay, phương tiện, trang thiết bị tại khu vực có hệ thống thu gom và phân tách dầu mỡ khỏi nước thải."],answer:2},
+{chapterID:"ATHK_FULL",questionID:70,chapter:"ATHK FULL",q:"88. Theo quy định tại Thông tư 29/2021/TT-BGTVT, người và phương tiện khi thực hiện nhiệm vụ tại khu bay phải đảm bảo các yêu cầu nào?",options:["A. Thân thủ tuyệt đối các quy định về công tác bảo đảm an ninh, an toàn tại cảng hàng không, sân bay ; Giữ liên lạc thường xuyên, thông suốt bằng bộ đàm với đài kiểm soát không lưu và đài kiểm soát mặt đất, tuyệt đối tuân thủ huấn lệnh của kiểm soát viên không lưu, mặc áo phản quang hoặc áo găn dải phản quang; Giữ khoảng cách an toàn tối thiểu theo tiêu chuân của ICAO theo cấp sân bay khi có tàu bay hoạt động.","B. Phải được sự đồng ý của người khai thác Cảng hàng không, sân bay, và kiêm soát viên không lưu.","C. Giữ liên lạc thường xuyên bằng bộ đàm với đài kiểm soát không lưu và đài kiêm soát mặt đât, tuyệt đôi tuân thủ huấn lệnh của kiểm soát viên không lưu, mặc áo có găn dải phản quang; Giữ khoảng cách an toàn tối thiểu theo tiêu chuân của ICAO theo cấp sân bay khi có tàu bay hoạt động."],answer:0},
+{chapterID:"ATHK_FULL",questionID:71,chapter:"ATHK FULL",q:"89. Giới hạn khu vực lân cận Cảng hàng không, sân bay, được quy định trong Luật HKDD Việt Nam như thế nào?",options:["A. 8 km tính từ ranh giới Cảng hàng không, sân bay trở ra.","B. 8 km tính từ điểm quy chiếu sân bay.","C. 8 km tính từ đài kiểm soát không lưu tại sân bay.","D. 8 km tính từ đường hạ cất cánh."],answer:0},
+{chapterID:"ATHK_FULL",questionID:72,chapter:"ATHK FULL",q:"90. Theo quy định tại Thông tư 29/2021/TT-BGTVT, cơ quan, đơn vị nào chịu trách nhiệm chủ trì đôi với việc thực hiện công tác phòng chống thiên tai, khẩn nguy sân bay, tìm kiêm cứu nạn tại cảng hàng không, sân bay ?",options:["A. Người khai thác cảng hàng không.","B. Cảng vụ hàng không.","C. Các Hãng hàng không và người khai thác cảng hàng không","D. Chính quyền địa phương nơi có Cảng hàng không, sân bay và Cảng vụ hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:73,chapter:"ATHK FULL",q:"91. Theo quy định tại Thông tư 29/2021/TT-BGTVT, cơ quan, đơn vị nào chịu trách nhiệm tổ chức, quản lý, khai thác cảng hàng không, sân bay?",options:["A. Cảng vụ hàng không.","B. Người khai thác cảng hàng không.","C. Người khai thác cảng hàng không và Cảng vụ hàng không","D. Các Hãng hàng không và Người khai thác cảng hàng không"],answer:1},
+{chapterID:"ATHK_FULL",questionID:74,chapter:"ATHK FULL",q:"92. Theo quy định tại Thông tư 29/2021/TT-BGTVT, cơ quan, đơn vị nào chịu trách nhiệm bảo đảm an toàn hàng không, an ninh hàng không và chất lượng dịch vụ đáp ứng các tiêu chuẩn, điều kiện theo quy định?",options:["A. Cảng vụ hàng không.","B. Các Hãng hàng không","C. Người khai thác cảng hàng không.","D. Cục Hàng không Việt Nam"],answer:2},
+{chapterID:"ATHK_FULL",questionID:75,chapter:"ATHK FULL",q:"93. Trong trường hợp có sự khác nhau giữa quy định của Luật HKDD Việt Nam và quy định của điều ước quốc tế mà Việt Nam là thành viên thì áp dụng quy định nào?",options:["A. Luật HKDD Việt Nam.","B. Luật khác có liên quan.","C. Luật quốc tế.","D. Điều ước quốc tế mà Việt Nam là thành viên."],answer:3},
+{chapterID:"ATHK_FULL",questionID:76,chapter:"ATHK FULL",q:"94. Theo quy định của Luật HKDD Việt Nam, cảng hàng không là gì?",options:["A. Cảng hàng không là khu vực xác định, bao gồm sân bay, nhà ga được sử dụng cho tàu bay đi, đến và thực hiện vận chuyển hành khách, hàng hóa và bưu gửi.","B. Cảng hàng không là khu vực xác định, bao gồm sân bay, nhà ga và trang bị, thiết bị, công trình cần thiết khác được sử dụng cho tàu bay đi, đến và thực hiện vận chuyển hàng không.","C. Cảng hàng không là khu vực xác định được xây dựng để bảo đảm cho tàu bay cất cánh, hạ cánh và di chuyển.","D. Cảng hàng không là khu vực xác định, bao gồm sân bay, nhà ga và công trình cần thiết khác được sử dụng cho tàu bay đi, đến và thực hiện vận chuyển hàng không."],answer:1},
+{chapterID:"ATHK_FULL",questionID:77,chapter:"ATHK FULL",q:"95. Quy định 'Hoạt động của mọi tổ chức, cá nhân cung cấp dịch vụ tại cảng hàng không, sân bay phải tuân thủ theo hệ thông quản lý an toàn sân bay đã được phê duyệt' được quy định tại văn bản nào?",options:["A. Luật Hàng không dân dụng Việt Nam năm 2006.","B. Nghị định Số: 102/2015/NĐ-CP/2015/NĐ-CP ngày 20/10/2015 của Chính phủ về quản lý, * khai thác cảng hàng không, sân bay, .","C. Thông tư số 17/2016/TT-BGTVT ngày 30/6/2016 của Bộ Giao thông vận tải quỵ định chi tiết về quản lỷ, khai thác cảng hàng không, sân bay.","D. Quy định an toàn tại cảng hàng không, sân bay"],answer:2},
+{chapterID:"ATHK_FULL",questionID:78,chapter:"ATHK FULL",q:"96. Theo quy định của Luật HKDD Việt Nam, nhân viên hàng không khi thực hiện nhiệm vụ phải mang theo các loại giấy tờ gì?",options:["A. Giấy phép, chứng chỉ chuyên môn phù hợp do Bô Giao thông vận tải câp hoặc công nhận.","B. Giấy phép, chứng chỉ chuyên môn, bằng lái xe theo quy định của pháp luật.","C. Giấy phép, chứng chỉ chuyên môn, bằng lái xe theo quy định của pháp luật và của người khai thác cảng hàng không, sân bay,","D. a và c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:79,chapter:"ATHK FULL",q:"97. Theo quy định của Luật HKDD Việt Nam, khu vực hạn chế của cảng hàng không sân bay là:",options:["A. Khu vực của cảng hàng không, sân bay và noi có công trình, trang bỉ, thiết bị hàng không mà việc ra, vào và hoạt động tại đó phải tuân thủ các quy định của cơ quan nhà nước có thẩm quyền và đươc kiểm tra, soi chiếu, giám sát, lục soát an ninh hàng không theo quy định.","B. Khu vực cảng hàng không, sân bay là noi có công trình, phưong tiện chuyên ngành hàng không mà việc ra, vào và hoạt động tại đó phải tuân thủ các quy định của cơ quan nhà nước có thẩm quyền và được kiểm tra, soi chiêu, giám sát an ninh hàng không.","C. Khu vực cảng hàng không, sân bay mà hoạt động tại đó phải tuân thủ các quy định của người khai thác cảng hàng không, sân bay.","D. b và c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:80,chapter:"ATHK FULL",q:"98. Theo quy định tại Thông tư 29/2021/TT-BGTVT, phương tiện chuyên ngành hàng không là?",options:["A. Phương tiện hoạt động tại cảng hàng không, sân bay, phục vụ trực tiếp cho các cơ quan, đơn vị có hoạt động khai thác thuộc cảng hàng không, sân bay.","B. Phương tiện, hang thiết bị hoạt động tại cảng hàng không, sân bay.","C. Phương tiện hoạt động tại khu vực hạn chế, đường giao thông nôi bô trong cảng hàng không, phục vụ trực tiếp cho hoạt động của cảng hàng không, sân bay.","D. Phương tiện đặc chủng của ngành hàng không hoạt động tại khu vực hạn chế cảng hàng không, sân bay."],answer:2},
+{chapterID:"ATHK_FULL",questionID:81,chapter:"ATHK FULL",q:"99. Theo quy định tại Thông tư 29/2021/TT-BGTVT, giao thông trong sân bay phải tuân thủ theo quy định nào?",options:["A. Tài liệu khai thác sân bay","B. Quy định của người khai thác cảng hàng không","C. Quy định của pháp luật về giao thông","D. Cả a, b, c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:82,chapter:"ATHK FULL",q:"100. Theo quy định tại Thông tư 29/2021/TT-BGTVT, người và phương tiện khi thực hiện nhiệm vụ tại khu bay phải giữ khoảng cách an toàn tối thiểu với tàu bay theo quy định của tổ chức nào?",options:["A. Người khai thác cảng hàng không","B. Tổ chức hàng không dân dụng quốc tế (ICAO)","C. Hiệp hội vận tải hàng không quốc tế (IATA)","D. Cơ quan quản lý Nhà nước về hàng không dân dụng"],answer:1},
+{chapterID:"ATHK_FULL",questionID:83,chapter:"ATHK FULL",q:"101. Theo quy định tại Thông tư 29/2021/TT-BGTVT, việc bảo vệ môi trường được thực hiện theo quy định nào?",options:["A. Quy định của pháp luật về bảo vệ môi trường trong hoạt động hàng không dân dụng","B. Quy định của pháp luật về bảo vệ môi trường","C. Quy định về bảo vệ môi trường của người khai thác cảng hàng không","D. a hoặc b hoặc c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:84,chapter:"ATHK FULL",q:"102. Theo quy đinh tại Thông tư 46/2016/TT-BGTVT, thẩm quyền áp dụng chế độ kỷ luật lao động đặc thù được quy định như thế nào?",options:["A. Giám đốc doanh nghiệp mà nhân viên hàng không ký họp đồng lao động có quyền áp dụng chế độ kỷ luật lao động đặc thù đôi với nhân viên hàng không khi vi phạm.","B. Người sử dụng hoặc người được ủy quyền sử dụng nhân viên hàng không có quyền áp dụng chế độ kỷ luật lao động đặc thù đối với nhân viên hàng không khi vỉ phạm.","C. Người trực tiếp ký họp đồng lao động với nhân viên hàng không có quyền áp dụng chế độ kỷ luật lao động đặc thù đối với nhân viên hàng không khi vi phạm.","D. a hoặc c"],answer:1},
+{chapterID:"ATHK_FULL",questionID:85,chapter:"ATHK FULL",q:"103. Theo quy định tại Thông tư 46/2016/TT-BGTVT, đối với nhân viên hàng không khi bị tạm đình chỉ công việc thì chế độ tiền lương trong thời gian bị đình chỉ được thực hiện theo quy định nào?",options:["A. Bộ luật Lao động","B. Luật HKDD Việt Nam","C. Thông tư 46/2016/TT-BGTVT của Bộ Giao thông vận tải hướng dẫn thực hiện chế độ lao động đặc thù đối với nhân viên hàng không","D. Quy định của doanh nghiệp ký họp đồng lao động với nhân viên hàng khong."],answer:0},
+{chapterID:"ATHK_FULL",questionID:86,chapter:"ATHK FULL",q:"104. Theo quy định tại TCCS 18, quy định về tiêu chuẩn vận hành động cơ như thế nào ?",options:["A. Đối vói các phương tiện khu baytư hành có số tự động thì không thể khửi động được động cơ khi cần so chưa ở vị trí trung hòa (N) hoặc ở vị trí đồ (P)","B. Đối với các Phương tiện khu baytự hành có số tự động thì không thể khởi động được động cơ khi phanh tay chưa cài","C. Cả a,b"],answer:0},
+{chapterID:"ATHK_FULL",questionID:87,chapter:"ATHK FULL",q:"105. Theo quy định tại TCCS 18, quy định về tiêu chuẩn vận hành như thế nào?",options:["A. Với thiết bị tự hành có tay ga thì xe phải có chức năng khi tay ga chưa trả hết thì không cài được phanh tay","B. Với thiết bị tự hành có tay ga thì xe phải có chức năng không cài được số tiến hoặc lùi khi tay ga chưa trả hết","C. Cả a,b"],answer:1},
+{chapterID:"ATHK_FULL",questionID:88,chapter:"ATHK FULL",q:"106. Theo quy định tại TCCS 18, hệ thống phanh đỗ phải giữ được phương tiện đầy tải ở độ dốc như thế nào?",options:["A. Độ dốc ít nhất là 4° (7%)","B. Độ dốc cao hơn 4° (7%) nếu người sử dụng yêu cầu","C. a và b"],answer:2},
+{chapterID:"ATHK_FULL",questionID:89,chapter:"ATHK FULL",q:"107. Theo quy định tại TCCS 18, để đạt năng suất và hiệu quả hoạt động cao nhất, các phương tiện phục vụ mặt đất cần có tính phô biên, thông dụng, phù hợp như thế nào?",options:["A. Phù họp với địa hình và môi trường của tất cả các cảng hàng không","B. Phù hợp với tất cả các loại tàu bay khác nhau","C. Cả a và b"],answer:1},
+{chapterID:"ATHK_FULL",questionID:90,chapter:"ATHK FULL",q:"108. Theo quy định tại TCCS 18, để đảm bảo an toàn trong công tác khai thác vận hành phương tiện khu bayđể phục vụ tàu bay ở mặt đất cần quan tâm đến các vấn đề gì?",options:["A. Thiết kể tàu bay; thiết kế phương tiện mặt đất phục vụ tàu bay; tiêu chuẩn khai thác đôi với các phương tiện mặt đât phục vụ tàu bay; quy trình phục vụ mặt đât.","B. Tài liệu kỹ thuật","C. Sổ tay hướng dẫn","D. Cả a, b, c"],answer:3},
+{chapterID:"ATHK_FULL",questionID:91,chapter:"ATHK FULL",q:"109. Theo quy định tại TCCS 18, khi thiết kế các phương tiện mặt đất phục vụ tàu bay các khoảng cách khai thác vận hành an toàn cần được quan tâm dựa trên cơ sở gì?",options:["A. Tàu bay có trọng lượng khai thác lớn nhất","B. Tàu bay có trọng lượng khai thác nhỏ nhất","C. Theo quy định của nhà sản xuất phương tiện"],answer:0},
+{chapterID:"ATHK_FULL",questionID:92,chapter:"ATHK FULL",q:"110. Theo quy định tại TCCS 18, đối với xe kéo đẩy tàu bay, sử dụng xe có lực kéo/đẩy như thế nào?",options:["A. Phù hợp vói lực kéo/đẩy cần thiết của loại tàu bay","B. Lực kéo/đẩy của xe kéo đẩy tàu bay luôn lớn hơn lực kéo/đẩy cần thiết của loại tàu bay","C. Lực kéo/đẩy của xe kéo đẩy tàu bay tối thiểu phải bằng lực kéo/đẩy cần thiêt của loại tàu bay","D. Lực kéo/đẩy của xe kéo đẩy tàu bay phải bằng hoặc lớn hơn lực kéo/đẩy cân thiêt của loại tàu bay"],answer:0},
+{chapterID:"ATHK_FULL",questionID:93,chapter:"ATHK FULL",q:"111. Trong quá trình phục vụ tàu bay, trang thiết bị, phương tiện bị sự cố kỹ thuật nhân viên vận hành phải xử lý như thế nào?",options:["A. Sửa chữa khắc phục, sau đó tiếp tục phục vụ","B. Dừng khai thác, báo cáo cán bộ quản lý, thay thế phương tiện khác để tiêp tục phục vụ","0"],answer:1},
+{chapterID:"ATHK_FULL",questionID:94,chapter:"ATHK FULL",q:"112. Dừng khai thácTrong quá trình di chuyển trên sân đỗ tàu bay trang thiết bị, phương tiện bị sự cô kỹ thuật không thê di chuyển được có ảnh hưởng đến đường lăn tàu bay nhân viên vận hành phải xử lý như thế nào?",options:["A. Sửa chữa khắc phục, sau đó tiếp tục phục vụ","B. Dừng khai thác, kéo về bãi tập kết, báo cáo cán bộ quản lý","C. Dừng việc điều khiển, vận hành, thông báo cho đài chỉ huy về sự cố, nhanh chóng gọi xe hỗ trợ để kéo trang thiết bị, phương tiện về khu vực an toàn, báo cáo cán bộ quản lý"],answer:2},
+{chapterID:"ATHK_FULL",questionID:95,chapter:"ATHK FULL",q:"113. Trường họp bộ đàm đang sử dụng ừên xe đầu kéo máy bay bị hỏng/ không hoạt động đột xuât khi xe đâu kéo máy bay đang di chuyển không tải trên đường lăn, nhân viên vận hành phải xử lý như thế nào?",options:["A. Tiếp tục di chuyển nhanh đến vị trí an toàn.","B. Dừng lại ngay lập tức và sử dụng điện thoại di động gọi cho cán bộ trực đơn vị hổ trợ.","C. Lập tức rời đường lăn và sử dụng điện thoại di động gọi cho Trực ban trưởng sân bay để được hướng dẫn.","D. Dừng lại ngay lập tức và sử dụng điện thoại di động gọi cho cán bộ trực đơn vị mang đến một bộ đàm tốt khác để thay thế."],answer:2},
+{chapterID:"ATHK_FULL",questionID:96,chapter:"ATHK FULL",q:"114. Trường họp xe nâng hàng bị hư hỏng đột xuất khi đang phục vụ tại máy bay, ngoài ra xe bị hư hỏng nặng không thể kéo xe ra khỏi bãi đỗ tàu bay, nhân viên vận hành phải xử lý như thề nào?",options:["A. Thông báo cán bộ trực đơn vị đề nghị hỗ trợ, đồng thời thông báo ngay cho Trực ban trưởng sân bay.","B. Thông báo cán bộ trực đơn vị đề nghị hổ trợ kỹ thuật và phương tiện để kéo xe nâng hàng về vị trí tập kết theo quy định.","C. Phải báo ngay cho Trực ban trưởng sân bay để kịp thời xử lý, kịp thời thông báo cho tổ bay, đại diện của hãng Hàng không và báo cáo cho cán bộ trực đơn vị.","D. Tiến hành kiểm tra, xác định nguyên nhân hư hỏng và tìm cách khắc phục sửa chữa tại chỗ để nhanh chóng kéo xe về vị trí tập kết theo qui định."],answer:2},
+{chapterID:"ATHK_FULL",questionID:97,chapter:"ATHK FULL",q:"115. Trong quá trình cấp điện phục vụ máy bay tại sân đỗ, bỗng nhiên phát hiện có ngọn lửa bốc lên từ cụm động cơ - máy phát điện của thiết bị. Theo phương án xử lý khẩn nguy, nhân viên vận hành phải có hành động xử lý nhanh chóng theo trình tự như thế nào?",options:["A. Tắt máy khẩn cấp, thu hồi dây cáp cấp điện và nhanh chóng đưa xe/máy về vị trí bãi tập kết, tiến hành kiểm tra và khắc phục nguyên nhân gây ra cháy thiết bị.","B. Thông báo khẩn thợ máy mặt đất, ngắt công tắc cấp điện lên máy bay, ngắt và thu hồi đầu dây điện liên kết với máy bay, nhanh chóng tiến hành dập đám cháy bằng bình cứu hoả trên thiết bị.Kịp thời cách ly thiết bị bị cháy ra xa khỏi vị trí bãi đỗ máy bay và phương tiện phục vụ khác, thông báo ngay cho Trực ban trưởng sân bay, kịp thời thông báo cho tổ bay, đại diện của hãng Hàng không và báo cáo cán bộ trực đơn vị.","C. Cả b và c."],answer:2},
+{chapterID:"ATHK_FULL",questionID:98,chapter:"ATHK FULL",q:"116. Nhân viên vận hành xe phục vụ đặc biệt chuẩn bị xuất phát rời khỏi máy bay sau khi đón khách, bất ngờ phát hiện xe bị cháy đột xuất. Theo phương án xử lý khẩn nguy, những hành động nào phải thực hiện ngay?",options:["A. Thông bảo cho trực ban trưởng Xí nghiệp và cán bộ trực đơn vị, nhanh chóng đưa xe về vị trí tập kết.","B. Nhanh chóng tiến hành dập đám cháy bằng bình cứu hoả trên xe, thông báo cán bộ trực đơn vị trợ giúp hỗ ừợ đưa xe rời khỏi máy bay.","C. Thông báo cho cán bộ trực đơn vị, tiến hành kiểm tra xem xét và xác định nguyên nhân, tham gia hỗ trợ di chuyển kịp thòi người tàn tật ra khỏi xe.","D. Tắt máy bằng công tắc khẩn cấp, thông báo nhân viên trơ giúp khách hạn chế khả năng di chuyển khách thoát ra khỏi xe, nhanh chóng tiến hành dập đảm cháy bằng bình cứu hoả trên xe, kịp thòi cách ly xe bị cháy ra xa khỏi vị trí bãi đỗ máy bay và phương tiện phục vụ khác, thông báo cho Trực ban trưởng sân bay kịp thời thông báo cho tổ bay, đại diện của hãng Hàng không, báo cáo cho cán bộ trực đơn vị."],answer:3},
+{chapterID:"ATHK_FULL",questionID:99,chapter:"ATHK FULL",q:"117. Trong quá trình hoạt động trên sân đỗ tàu bay, khi xảy ra sự cố, tai nạn nhưng không gây hậu quả nghiêm trọng và không cản trở cho hoạt động bay phải xử lý thế nào?",options:["A. Báo cho cán bộ trực để xử lý.","B. Báo ngay cho trực ban trưởng sân bay và giữ nguyên hiên trường cho đến khi cơ quan chưc năng có mặt để xử lý.","C. Báo cho đơn vị chủ quản và nhanh chóng thu dọn hiện trường."],answer:1},
+{chapterID:"ATHK_FULL",questionID:100,chapter:"ATHK FULL",q:"118. Trong quá ừình hoạt động trên sân đỗ tàu bay, khi xảy ra sự cố, tai nạn nhưng không gây hậu quả nghiêm ữọng và gây cản ừở cho hoạt động bay phải xử lý thế nào?",options:["A. Báo cho cán bộ trực để xử lý.","B. Báo ngay cho Trực ban trưởng sân bay và Tổ kiểm soát lưu thông sân đô nhanh chóng đánh dấu, chụp hình hiện trường và phương tiện liên quan sự cố/ tai nạn phải được di dòi ngay sau đó.","C. Báo cho đơn vị chủ quản và nhanh chóng thu dọn hiện trường."],answer:1},
+{chapterID:"ATHK_FULL",questionID:101,chapter:"ATHK FULL",q:"119. Trong quá trình kéo máy bay vào bãi đỗ nhân viên kéo máy bay quá vạch qui định phải xử lý thê nào?",options:["A. Chèn bánh máy bay và cắt liên kết giữa máy bay với xe đẩy và di chuyển xe vê nơi qui định.Dùng số lùi để đẩy máy bay lùi lại đúng vạch dừng qui định, chèn bánh máy bay, cắt liên kết giữa máy bay với xe đẩy và di chuyển xe về nơi qui định.","B. Chèn bánh máy bay, cắt liên kết giữa máy bay với xe đẩy, quay xe và liên kết lại với máy bay, tháo chèn bánh máy bay và đẩy lùi máy bay đúng vạch dừng qui định, chèn bánh máy bay, cắt liên kết giữa máy bay với xe đẩy và di chuyển xe về noi qui định.B","0"],answer:1},
+{chapterID:"ATHK_FULL",questionID:102,chapter:"ATHK FULL",q:"120. Trường hợp máy bay đã dừng hẳn tại bãi đỗ, bánh trước máy bay đã được chèn nhưng động cơ chính và đèn chống va chạm chưa tắt, cầu ống hành khách có được phép tiếp cận cửa hành khách phía sau của máy bay không?",options:["A. Được phép.","B. Được phép tiếp cận khi có sự đồng ý của thợ máy mặt đất.","C. Được phép tiếp cận khi có sự đồng ý của cơ trưởng","D. Không được phép."],answer:3},
+{chapterID:"ATHK_FULL",questionID:103,chapter:"ATHK FULL",q:"121. Trường họp khi đang cấp khí khởi động máy bay xảy ra sự cố mất liên kết ống cấp khí với máy bay phải xử lý thế nào?",options:["A. Tắt động cơ ngay lập tức.","B. Đóng van cấp khí ngay lập tức và tắt động cơ.","C. Tắt động cơ và sau đó đóng van cấp khí."],answer:1},
+{chapterID:"ATHK_FULL",questionID:104,chapter:"ATHK FULL",q:"122. Trường họp xe nâng hàng đang tiếp cận máy bay, sàn nâng trước đột ngột nâng lên phải xử lý thế nào?",options:["A. Tắt động cơ.","B. Tác động công tắc hạ sàn nâng.","C. Đóng công tắc khẩn cấp."],answer:2},
+{chapterID:"ATHK_FULL",questionID:105,chapter:"ATHK FULL",q:"123. Tại khu vực hạn chế của cảng hàng không sân bay, công tác kéo đẩy tàu bay do ai chỉ huy?",options:["A. Cơ trưởng chuyến bay","B. Thợ máy","C. Người giám sát phương tiện","D. Đài kiểm soát mặt đất"],answer:1},
+{chapterID:"ATHK_FULL",questionID:106,chapter:"ATHK FULL",q:"124. Nhân viên Điều khiển phương tiện Nguyễn Văn A được cấp thẻ Kiểm soát an ninh với ký hiệu khu vực hạn chế ghi trên thẻ là số 1 (Khu vực sân đỗ tàu bay, đường hạ cất cánh, đường lăn và các khu vực khác trong sân bay). Người thân của Ông Nguyễn Văn A sau khi làm thủ tục vào khu vực phòng chờ ga đi quốc nội để chờ lên tàu bay. Do muốn có thêm thời gian để trò chuyện với người thân, ông Nguyễn Văn A đã qua cửa soi chiếu nội bộ rồi vào khu vực ga đi quốc nội. Hành động này của ông Nguyễn Văn A được đánh giá như thế nào?",options:["A. Sai qui định","B. Chấp nhận được do ông Nguyễn Văn A là nhân viên hàng không","C. Chấp nhận được với Điều kiện ông Nguyễn Văn A đã được phép của nhân viên an ninh hàng không"],answer:0},
+{chapterID:"ATHK_FULL",questionID:107,chapter:"ATHK FULL",q:"125. Nhân viên Điều khiển, vận hành phương tiện khu bayđược cấp thẻ Kiểm soát an ninh vói ký hiệu khu vực hạn ché ghi trên thẻ là số 1. Khu vực số 1 được hiểu là khu vực?",options:["A. Khu vực hành khách sau khi đã kiểm tra soi chiếu người và hành lý chờ để đi tàu bay (khu vực cách ly) và các khu vực hạn chế khác tại nhà ga đi quốc tế","B. Khu vực hành khách sau khi đã kiểm tra soi chiếu người và hành lý chờ để đi tàu bay (khu vực cách ly) và các khu vực hạn chế khác tại nhà ga đi nội địa","C. Khu vực phục vụ hành lý ký gửi, hàng hoá, thư, bưu phẩm, bưu kiện sau khi đã được kiểm tra an ninh để đưa lên tàu bay tại cảng hàng không","D. Khu vực sân đỗ tàu bay, đường hạ cất cánh, đường lăn và các khu vực khác trong sân bay"],answer:3},
+{chapterID:"ATHK_FULL",questionID:108,chapter:"ATHK FULL",q:"126. Thẻ kiểm soát an ninh của nhân viên điều khiển, vận hành phương tiện, trang thiết bị phục vụ tàu bay chuyên cơ được qui định như thế nào?",options:["A. Thẻ kiểm soát an ninh sử dụng nhiều lần với ký hiệu khu vực hạn chế ghi trên thẻ là số 1 màu đỏ","B. Thẻ kiểm soát an ninh sử dụng một lần với ký hiệu khu vực hạn chế là số 1 và mục đích là phục vụ chuyên cơ","C. Thẻ kiểm soát an ninh sử dụng nhiều lần với ký hiệu khu vực hạn chế ghi trên thẻ là số 1 và số 4 màu đen","D. a hoăcb"],answer:3},
+{chapterID:"ATHK_FULL",questionID:109,chapter:"ATHK FULL",q:"127. Theo quy định tại Nghị định Số: 102/2015/NĐ-CP, người, đồ vật, phương tiện vào, rời, hoạt động tại khu vực hạn chế cảng hàng không, sân bay, phải chịu sự kiểm soát hoạt động như thế nào?",options:["A. Kiểm tra, giám sát về an ninh an toàn hàng không của người khai thác cảng hàng không","B. Kiểm tra, giám sát về an ninh, an toàn hàng không, bảo vệ môi trường theo quy định của pháp luật","C. Kiểm tra, giám sát về an ninh, an toàn hàng không, bảo vệ môi trường của cơ quan quản lý Nhà nước về hàng không tại cảng hàng không, sân bay,","D. Theo quy định của Luật hàng không dân dụng Việt Nam"],answer:1},
+{chapterID:"ATHK_FULL",questionID:110,chapter:"ATHK FULL",q:"128. Theo quy định tại Nghị định Số: 102/2015/NĐ-CP, cơ quan, đơn vị nào chịu ữách nhiệm tố chức, giám sát việc đăng kiểm kỹ thuật của phương tiện chuyên ngành hoạt động tại cảng hàng không, sân bay?",options:["A. Người khai thác cảng hàng không","B. Người khai thác và quản lý phương tiện chuyên ngành hàng không","C. Cảng vụ hàng không","D. Cục Hàng không Việt Nam"],answer:3},
+{chapterID:"ATHK_FULL",questionID:111,chapter:"ATHK FULL",q:"129. Theo quy định tại Nghị định Số: 102/2015/NĐ-CP, đối với biển số hoạt động của phương tiện chuyên ngành hoạt động tại cảng hàng không, sân bay, cơ quan, đơn vị nào có thẩm quyền cấp hoặc thu hồi?",options:["A. Cục Hàng không Việt Nam cấp và Cảng vụ hàng không thu hồi","B. Cục hàng không Việt Nam cấp và thu hồi","C. Cảng vụ hàng không cấp và thu hồi","D. Cơ quan nào cấp thì cơ quan đó mới có quyền thu hồi"],answer:2},
+{chapterID:"ATHK_FULL",questionID:112,chapter:"ATHK FULL",q:"130. Theo quy định tại TCCS 18, phương tiện khu bay phải đủ điều kiện như thế nào để thích ứng với môi trường?",options:["A. Được thiết kế và làm bằng vật liệu theo quy định của từng loại phương tiện và phải đủ điều kiện thích ứng với mọi thay đổi của thời tiết.","B. Được thiết kế và làm bằng vật liệu theo quy định của phương tiện giao thông và đảm bảo điều kiện thích ứng với môi trường và sự thay đổi cùa khí hậu.","C. Được thiết kế và làm bằng vật liệu theo quy định của nhà sản xuất đối với từng loại phương tiện đảm bảo phù họp với điều kiện về thời tiết và môi trường.","D. Được thiết kế và làm bằng vật liệu cho phép không bị phá hủy trong mọi điều kiện thay đổi của khí hậu, phải đủ điều kiện để thích ứng với môi trường nhiệt độ từ -5°c đến +60 c và độ ẩm không khí đến 100%."],answer:3},
+{chapterID:"ATHK_FULL",questionID:113,chapter:"ATHK FULL",q:"131. Theo quy định tại TCCS 18, phương tiện khu bay để đủ điều kiện làm việc cả ngày và đêm phải được hang bị các thiết bị như thế nào?",options:["A. Thiết bị cảnh báo phù hợp (đèn, tấm phản quang) theo quy định của nhà sản xuất phương tiện.","B. Thiết bị cảnh báo phù hợp (đèn, tấm phản quang) ở các phía của phương tiện.","C. Thiết bị cảnh báo cho từng loại phương tiện tùy theo nhiệm vụ cụ thể của phương tiện đó.","D. Thiết bị cảnh báo phù họp (đèn, tấm phản quang) theo quy định của người khai thác và quản lý phương tiện."],answer:1},
+{chapterID:"ATHK_FULL",questionID:114,chapter:"ATHK FULL",q:"132. Theo quy định tại TCCS 18, động cơ đốt trong của các phương tiện khu bay phải đáp ứng tiêu chuân môi trường như thê nào?",options:["A. Theo quy định của Quy chuẩn kỹ thuật quốc gia về chất lượng an toàn kỹ thuật và bảo vệ môi trường đối với xe máy chuyên dùng.","B. Theo quy định tại Thông tư về bảo vệ môi trường trong hoạt động hàng không dân dụng.","C. Theo quy định của người sản xuất phương tiện","D. Theo quy định của người khai thác cảng hàng không"],answer:0},
+{chapterID:"ATHK_FULL",questionID:115,chapter:"ATHK FULL",q:"133. Theo quy định tại TCCS 18, bán kính vòng quay của phương tiện khu bay được quy định như thế nào?",options:["A. Bán kính vòng quay lớn nhất","B. Bán kính vòng quay nhỏ nhất","C. Tùy theo từng loại phương tiện","D. Theo quy định của nhà sản xuất đối với từng loại phương tiện"],answer:1},
+{chapterID:"ATHK_FULL",questionID:116,chapter:"ATHK FULL",q:"134. Theo quy định tại TCCS 18, đối với phương tiện khu bay dùng để kéo thì tốc độ kéo được quy định như thế nào?",options:["A. Tốc độ kéo phải phù họp với đầu kéo nhưng không vượt quá 20km/h","B. Tốc độ kéo phải phù hợp vói đầu kéo nhưng không vượt quá 32km/h","C. Theo hướng dẫn sử dụng của nhà sản xuất phương tiện dùng để kéo tại khu bay.","D. Tốc độ kéo phải phù họp với đầu kéo nhưng không vượt quá tốc độ quy định của người khai thác cảng đối với phương tiện hoạt động tại khu bay"],answer:1},
+{chapterID:"ATHK_FULL",questionID:117,chapter:"ATHK FULL",q:"135. Theo quy định tại TCCS 18, phương tiện khu bay phải có khả năng hoạt động như thế nào?",options:["A. Trong mọi điều kiện địa hình tại khu bay","B. Phù họp với yêu cầu của ngưởi sử dụng","C. Trong mọi điều kiện tại khu bay và phù hợp với yêu cầu của người quản lý và khai thác phương tiện.","D. a và b"],answer:3},
+{chapterID:"ATHK_FULL",questionID:118,chapter:"ATHK FULL",q:"136. Theo quy định tại TCCS 18, cồng năng sử dụng đối với móc kéo của các phương tiện khu baynhư thế nào?",options:["A. Quy định của nhà sản xuất đối với từng loại phương tiện","B. Để lắp cáp hay cần kéo để khi gặp sự cố có thể kéo chúng về vị trí quy đinh.","C. Tất cả các phương tiện khu bayđều phải trang bị móc kéo để kéo khi cần.","D. Theo tiêu chuẩn kỹ thuật của Nhà sản xuất phương tiện"],answer:1},
+{chapterID:"ATHK_FULL",questionID:119,chapter:"ATHK FULL",q:"137. Theo quy định tại TCCS 18, đối với các phương tiện chạy bằng điện, dung tích của thùng nhiên liệu được xác định như thế nào?",options:["A. Xác định bởi nhu cầu của người sử dụng phương tiện","B. Xác định bởi quy định của văn bản quy phạm pháp luật quy định về phương tiện chuyên ngành hàng không","C. Xác định của nhà sản xuất phương tiện","D. Xác định bởi yêu cầu của Người khai thác cảng hàng không"],answer:2},
+{chapterID:"ATHK_FULL",questionID:120,chapter:"ATHK FULL",q:"138. Theo quy định tại TCCS 18, đối với các phương tiện khu baytự di chuyển được thì vị trí tay lái được quy định như thế nào?",options:["A. Phải có tay lái thuận (vị trí người lái ở bên trái theo chiều tiến của thiết bị) trừ trường hợp do tính chất của công việc đặc biệt thì xe có thể có tay lái nghịch hoặc tay lái giữa.","B. Vị trí tay lái căn cứ vào công năng sử dụng của phương tiện và do nhà sản xuât của phương tiện quy định","C. Phương tiện khu bayphải có tay lái thuận, căn cứ nhu cầu sử dụng của người khai thác phương tiện có thể thay đổi vị trí tay lái của phương tiện theo nhu cầu.","D. Tùy từng phương tiện để bố trí vị trí tay lại cho phù hợp."],answer:0},
+{chapterID:"ATHK_FULL",questionID:121,chapter:"ATHK FULL",q:"139. Theo quy định tại TCCS 18, để lái xe an toàn và thực hiện các nhiệm vụ tác nghiệp, đối với các phương tiện khu baytự hành phải được trang bị các thiết bị như thế nào?",options:["A. Tùy từng loại phương tiện khu baytự hành mà nhà sản xuất bố trí các thiết bị cảnh báo cho phù họp","B. Phương tiện khu baytự hành phải có đầy đủ các thiết bị phụ trợ theo quy định của người sử dụng phương tiện","C. Phương tiện khu baytự hành phải có đủ đèn chiếu sáng và đèn cảnh báo.","D. Phương tiện khu baytự hành phải có đầy đủ các thiết bị chiếu sáng theo quy định của nhà sản xuất."],answer:2},
+{chapterID:"ATHK_FULL",questionID:122,chapter:"ATHK FULL",q:"140. Theo quy định tại TCCS 18, đối với phương tiện khu baysơ đồ hệ thống điện phải có trong tài liệu nào?",options:["A. Tài liệu kỹ thuật đỉ kèm phương tiện","B. Hướng dẫn sử dụng của nhà sản xuất phương tiện","C. Tài liệu về hệ thống điện kèm theo phương tiện","D. Cả a, b, c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:123,chapter:"ATHK FULL",q:"141. Theo quy định tại TCCS 18, đối với tài liệu kỹ thuật của các phương tiện khu bayđược quy định như thế nào?",options:["A. Tài liệu kỹ thuật phù hợp cho việc khai thác, bảo dưỡng và sửa chữa","B. Tài liệu kỹ thuật phù hợp với công năng sử dụng của phương tiện","C. Tài liệu kỹ thuật phù họp với công năng sử dụng và quản lý của người khai thác phương tiện","D. Tài liệu kỹ thuật theo quy định của nhà sản xuất phương tiện"],answer:0},
+{chapterID:"ATHK_FULL",questionID:124,chapter:"ATHK FULL",q:"142. Theo quy định tại TCCS 18, đối với mọi thay đổi, cải tiến về phụ tùng thay thế phải thực hiện như thế nào?",options:["A. Phải được thông báo cho người điều khiển và người quản lý phương tiện","B. Phải được thông báo cho người khai thác vận hành bằng văn bản","C. Phải theo đúng quy định của người sản xuất","D. Phải có sự đồng ý của người quản lý phương tiện"],answer:1},
+{chapterID:"ATHK_FULL",questionID:125,chapter:"ATHK FULL",q:"143. Theo Tiêu chuẩn cơ sở 18, phương tiện chuyên dùng ừong ngành hàng không hoạt động ừên khu bay là?",options:["A. Phương tiện (bao gồm các loại xe, mooc, thiết bị không có bánh xe di chuyển được, có gắn động cơ hoặc không gắn động cơ), có kết cấu đặc thù hoặc được hoán cải, trang bi những thiết bỉ để thưc hiên viêc vẳn chuyển hành khách, hành ỉý, hàng hóa, bưu gửi bằng đường hàng không; các thiết bị hàng không phục vụ việc khai thác tàu bay và họat động bảo dưỡng tàu bay.","B. Phương tiện có thể tự di chuyển trên khu bay hoặc được hỗ ữợ di chuyển từ các phương tiện khác (bao gồm các loại xe, mooc, thiết bị không có bánh xe di chuyển được, có gắn động cơ hoặc không gắn động cơ) để phục vụ việc vận chuyên hành khách, hành lý, hàng hoá, bưu phâm, bưu kiện băng đường Hàng không và phục vụ công tác kỹ thuật cho tàu bay.","C. Phương tiện chuyên dùng, phương tiện đặc chủng trong ngành hàng không có thê tự di chuyên hay không tự di chuyên trên khu bay để phục vụ việc vận chuyển hành khách, hành lý, hàng hoá, bưu phẩm, bưu kiện bằng đường Hàng không; các thiết bị hàng không phục vụ việc khai thác tàu bay và họat động bảo dưỡng tàu bay."],answer:0},
+{chapterID:"ATHK_FULL",questionID:126,chapter:"ATHK FULL",q:"144. Theo quy định tại Thông tư 29/2021/TT-BGTVT, sự cố phương tiện va chạm với phương tiện, trang thiêt bị hoặc với người tại cảng hàng không, sân bay, được phân loại tương đương với mức nào?",options:["A. Sự cố nghiêm trọng (mức B)","B. Sự cố uy hiếp an toàn mức cao (mức C)","C. Sự cố nguy cơ uy hiếp an toàn (mức D)","D. Vụ việc (mức E)"],answer:2},
+{chapterID:"ATHK_FULL",questionID:127,chapter:"ATHK FULL",q:"145. Theo quy định tại Thông tư 29/2021/TT-BGTVT, sự cố gây hư hỏng phương tiện, trang thiết bị hoạt động trong khu bay được phân loại như thế nào?",options:["A. Sự cố nghiêm trọng (mức B)","B. Sự cố uy hiếp an toàn mửc cao (mức C)","C. Sự cố nguy cơ uy hiếp an toàn (mức D)","D. Vụ việc (mức E)"],answer:1},
+{chapterID:"ATHK_FULL",questionID:128,chapter:"ATHK FULL",q:"146. Theo quy định tại Thông tư 29/2021/TT-BGTVT, tổ chức, cá nhân được khuyến khích và tạo điều kiện tự nguyện báo cáo các vụ việc có nguy cơ gây mất an toàn khai thác cảng hàng không sân bay đến cơ quan, tổ chức nào?",options:["A. Cục Hàng không Việt Nam","B. Người khai thác cảng hàng không","C. Cơ quan quản lý Nhà nước hoạt động tại cảng hàng không","D. Cả a, b, c"],answer:0},
+{chapterID:"ATHK_FULL",questionID:129,chapter:"ATHK FULL",q:"147. Theo quy định tại Thông tư 29/2021/TT-BGTVT, thiết bị liên lạc gắn ữên phương tiện khi di chuyển trên khu bay được quy định tại tài liệu nào?",options:["A. Tài liệu khai thác cảng hàng không","B. Tài liệu khai thác phương tiện","C. Tài liệu khai thác sân bay","D. Cả a, b, c"],answer:2},
+{chapterID:"ATHK_FULL",questionID:130,chapter:"ATHK FULL",q:"148. Theo quy định tại Thông tư 29/2021/TT-BGTVT, niên hạn sử dụng của các phương tiện hoạt động tại cảng hàng không, sân bay được quy định như thế nào?",options:["A. Tuân thủ theo quy định của người khai thác cảng","B. Tuân thủ theo tiêu chuẩn áp dụng","C. Tuân thủ theo quy định của pháp luật về phương tiện giao thông"],answer:1},
+{chapterID:"ATHK_FULL",questionID:131,chapter:"ATHK FULL",q:"149. Theo quy định tại Thông tư 29/2021/TT-BGTVT, giấy phép khai thác thiết bị hàng không bị thu hồi trong trường họp nào?",options:["A. Thiết bị gây mất an toàn cho hoạt động tại cảng hàng không, sân bay,","B. Thiết bị đã từng gây mất an toàn cho hoạt động tại cảng hàng không, sân bay,","C. Khai thác thiết bị có khả năng gây mất an toàn cho hoạt động tại cảng hàng không, sân bay."],answer:2},
+{chapterID:"ATHK_FULL",questionID:132,chapter:"ATHK FULL",q:"150. Theo quy định tại Thông tư 29/2021/TT-BGTVT, biển số của phương tiện chuyên ngành hoạt động tại cảng hàng không, sân bay bị thu hồi khi nào?",options:["A. Hết niên hạn sử dụng đối với các xe có niên hạn sử dụng theo quy định của nhà sản xuất","B. Doanh nghiệp cung cấp dịch vụ hàng không không còn nhu cầu sử dụng phương tiện để hoạt động tại cảng hàng không, sân bay.","C. Hết niên hạn sử dụng theo quy định của pháp luật đối với phương tiện giao thông.","D. a và b"],answer:3},
+{chapterID:"ATHK_FULL",questionID:133,chapter:"ATHK FULL",q:"151. Theo quy định tại Thông tư 29/2021/TT-BGTVT, cơ quan, đơn vị nào quy định cụ thể tốc độ tối đa của phương tiện hoạt động tại khu vực hạn chế của cảng hàng không, sân bay?",options:["A. Căn cứ điều kiện cụ thể của từng cẳng hàng không sân bay, người khai thác cảng hàng không, sân bay, sẽ quy định cụ thể tổc độ tối đa của phương tiện.","B. Căn cứ điều kiện cụ thể của từng loại phương tiện, người quản lý, khai thác phương tiện sẽ quy định cụ thể tốc độ của phương tiện.","C. Cảng vụ hàng không quy định tốc độ đối với tất cả các phương tiện Áp dụng tốc độ theo quy định đối với phương tiện chuyên ngành hàng không"],answer:0},
+{chapterID:"ATHK_FULL",questionID:134,chapter:"ATHK FULL",q:"152. Theo qui định tại Nghị Định 147, cá nhân sử dụng thẻ kiểm soát an ninhhàng không mà không đúng phạm vi bị xử phạt vi phạm hành chính nhưthế nào?",options:["A. Cảnh cáo","B. Phạt tiền từ 1 00.000đ đến 500.000đ","C. Phạt tiền từ 500.000đ đến 1.000.000đ"],answer:2},
+{chapterID:"ATHK_FULL",questionID:135,chapter:"ATHK FULL",q:"153. Theo qui định tại Nghị Định 147, người điều khiển, vận hành phương tiện sử dụng điện thoại di động khi thực hiện nhiệm vụ bị xử phạt vi phạm hành chính như thế nào?",options:["A. Phạt tiền từ 500.000đ đến 1.000.000đ","B. Phạt tiền từ 1.000.000đ đến 3.000.000đ","C. Tước quyền sử dụng giấy phép từ 01 đến 03 tháng"],answer:1},
+{chapterID:"ATHK_FULL",questionID:136,chapter:"ATHK FULL",q:"154. Theo qui định tại Nghị Định 147, cá nhân làm mất thẻ kiểm soát an ninh hàng không mà không thông báo ngay cho cơ quan cấp thẻ bị xử phạt vi phạm hành chính như thế nào?",options:["A. Phạt cảnh cáo","B. Phạt tiền từ 100.000 đ đến 500.000đ","C. Phạt tiền từ 500.000đ đến 1.000.000đ"],answer:1},
+{chapterID:"ATHK_FULL",questionID:137,chapter:"ATHK FULL",q:"155. Giấy phép hết hiệu lực trong các trường hợp nào?",options:["A. Hết thời hạn hiệu lực ghi trong Giấy phép.","B. Nhân viên kỹ thuật không đủ điều kiện sức khoẻ để sử dụng Phương tiện khu bay.","C. a và c đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:138,chapter:"ATHK FULL",q:"156. Theo qui định tại Nghị Định 147, cá nhân có hành vi không thực hiện hoặc thực hiện không đúng nhiệm vụ theo giấy phép, chứng chỉ chuyên môn đã được cấp hoặc công nhận bị áp dụng hình thức xử phạt hành chính như thê nào?",options:["A. Phạt tiền từ 5.000.000đ đến 10.000.000d và tước quyền sử dụng giấy phép từ 1 đến 3 tháng","B. Phạt tiền từ 1.000.000đ đến 20.000.000đ","C. Tước quyền sử dụng giấy phép từ 01 tháng đến 03 tháng"],answer:0},
+{chapterID:"ATHK_FULL",questionID:139,chapter:"ATHK FULL",q:"157. Phương tiện khu bay phải đáp ứng những yêu cầu nào?",options:["A. Yêu cầu về an toàn kỹ thuật, bảo vệ môi trường.","B. Giấy phép do Cục Hàng không Việt Nam hoặc tổ chức được ủy quyền cấp.","C. Cả a và b đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:140,chapter:"ATHK FULL",q:"158. Giấy phép hoạt động của các Phương tiện khu bay sẽ không còn giá trị trong các trường hợp nào?",options:["A. Bị thu hồi, đình chỉ.","B. Không đáp ứng các yêu cầu về an toàn kỹ thuật và bảo vệ môi trường.","C. a,b, c đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:141,chapter:"ATHK FULL",q:"159. Những yêu cầu cơ bản để nhân viên kỹ thuật được phép làm việc trên khu bay?",options:["A. Phải có Giấy phép còn hiệu lực do Cục Hàng không Việt Nam cấp.","B. Nắm chắc mọi quy tắc về an toàn lao động và quy định phòng chống cháy của đơn vị.","C. Cả a, b, c đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:142,chapter:"ATHK FULL",q:"160. Những điều mà nhân viên kỹ thuật cần chú ý khi điều khiển Phương tiện khu bay tiếp cận tàu bay?",options:["A. Phương tiện khu bay phải chuyển động từ từ, cấm phanh đột ngột.","B. Phải có người hướng dẫn đối với các Phương tiện khu bay tiếp cận tàu bay theo hình thức lùi (trừ các Phương tiện khu bay có hệ thống tự động tiếp cận tàu bay).","C. a,b,c đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:143,chapter:"ATHK FULL",q:"161. Giấy phép hoạt động của các Phương tiện khu bay do cơ quan nào cấp?",options:["A. Cục Hàng không Việt Nam hoặc tổ chức được ủy quyền.","B. Tổ chức kiểm định xe cơ giới.","C. Cảng hàng không sân bay."],answer:0},
+{chapterID:"ATHK_FULL",questionID:144,chapter:"ATHK FULL",q:"162. Tốc độ tối đa của các Phương tiện khu bay được quy định là bao nhiêu?",options:["A. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 35 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất.","B. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 25 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất.","C. 05 km/h trong khu vực an toàn cho tàu bay ở mặt đất; 20 km/h ngoài khu vực an toàn cho tàu bay ở mặt đất."],answer:0},
+{chapterID:"ATHK_FULL",questionID:145,chapter:"ATHK FULL",q:"163. Tốc độ tối đa của các Phương tiện khu bay tại từng cảng hàng không cụ thể do ai quy định?",options:["A. Giám đốc Cảng hàng không.","B. Cục Hàng không Việt Nam.","C. Tổng giám đốc Tổng công ty cảng hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:146,chapter:"ATHK FULL",q:"164. Khi hoạt động trên khu bay, lái xe chấp hành hướng chạy, cách vòng tránh theo quy định của tổ chức nào?",options:["A. Quy định của các văn bản pháp luật về giao thông đường bộ của nước Việt Nam (trừ phạm vi khu vực an toàn cho tàu bay ở trên mặt đất).","B. Cục Hàng không Việt Nam.","C. Cảng hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:147,chapter:"ATHK FULL",q:"165. Khi hoạt động trên khu bay, về tuyến và hành lang, luồng chạy các Phương tiện khu bay phải tuân theo quy định của tổ chức nào?",options:["A. Cục Hàng không Việt Nam.","B. Luật đường bộ nước Việt nam.","C. Cảng hàng không."],answer:2},
+{chapterID:"ATHK_FULL",questionID:148,chapter:"ATHK FULL",q:"166. Các Phương tiện khu bay chỉ được tiếp cận với tàu bay khi nào?",options:["A. Khi tàu bay đã dừng hẳn, đã chèn bánh.","B. Khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt.","C. Khi tàu bay đã dừng hẳn, đã chèn bánh, động cơ chính đã tắt, đèn nháy cảnh báo đã tắt."],answer:2},
+{chapterID:"ATHK_FULL",questionID:149,chapter:"ATHK FULL",q:"167. Ai quy định thứ tự phục vụ tàu bay của các Phương tiện khu bay hoạt động trên khu bay?",options:["A. Giám đốc cảng hàng không.","B. Cục trưởng Cục Hàng không Việt Nam.","C. Tổng Giám đốc Tổng công ty cảng hàng không."],answer:0},
+{chapterID:"ATHK_FULL",questionID:150,chapter:"ATHK FULL",q:"168. Khi tàu bay đang nạp nhiên liệu, các Phương tiện khu bay không được khởi động động cơ đốt trong ở phạm vi nhỏ hơn bao nhiêu mét?",options:["A. 10 m","B. 15 m","C. 20 m."],answer:1},
+{chapterID:"ATHK_FULL",questionID:151,chapter:"ATHK FULL",q:"169. Khi sử dụng xe kéo đẩy tàu bay, người điều khiển phải tuân thủ các giới hạn về tốc độ tối đa là bao nhiêu?",options:["A. 10 km/h khi đang kéo đẩy tàu bay; 25 km/h khi chạy không tải (không kéo, đẩy tàu bay).","B. 10 km/h khi đang kéo đẩy tàu bay; 20 km/h khi chạy không tải (không kéo, đẩy tàu bay).","C. 05 km/h khi đang kéo đẩy tàu bay; 15 km/h khi chạy không tải (không kéo, đẩy tàu bay)."],answer:0},
+{chapterID:"ATHK_FULL",questionID:152,chapter:"ATHK FULL",q:"170. Khi dẫn tàu bay phải bảo đảm khoảng cách giửa xe dẫn và tàu bay là bao nhiêu?",options:["A. 150 đến 200 mét.","B. 100 đến 140 mét.","C. 300 đến 350 mét."],answer:0},
+{chapterID:"ATHK_FULL",questionID:153,chapter:"ATHK FULL",q:"171. Nhân viên kỹ thuật xử lý như thế nào khi Phương tiện khu bay đang phục vụ tàu bay thì bị hỏng?",options:["A. Nhanh chóng tự sửa chữa ngay tại chỗ để kịp thời phục vụ máy bay.","B. Liên lạc để thợ sửa chữa ra khắc phục hỏng hóc để kịp thời phục vụ tàu bay.","C. Đưa Phương tiện khu bay ra khỏi khu vực phục vụ về vị trí mà Cảng hàng không quy định."],answer:2},
+{chapterID:"ATHK_FULL",questionID:154,chapter:"ATHK FULL",q:"172. Nhân viên kỹ thuật Phương tiện khu bay được phân thành những loại nào?",options:["A. 03 loại: lái xe, vận hành, bảo dưỡng sửa chữa.","B. 02 loại: điều khiển-vận hành, bảo dưỡng sửa chữa.","C. 03 loại: điều khiển-vận hành, bảo dưỡng, sửa chữa."],answer:1},
+{chapterID:"ATHK_FULL",questionID:155,chapter:"ATHK FULL",q:"173. Nhân viên kỹ thuật Phương tiện khu bay muốn được phép điều khiển – vận hành Phương tiện khu bay thì phải có giấy chứng nhận gì?",options:["A. Giấy chứng nhận của đơn vị quản lý là đã qua lớp đào tạo huấn luyện về chuyên môn với kết quả tốt.","B. Giấy phép do Cục Hàng không Việt Nam cấp.","C. Giấy phép do Cảng hàng không sân bay cấp."],answer:1},
+{chapterID:"ATHK_FULL",questionID:156,chapter:"ATHK FULL",q:"174. Khi đã có Giấy phép do Cục Hàng không Việt Nam cấp, nhân viên kỹ thuật Phương tiện khu bay được phép làm gì?",options:["A. Điều khiển – vận hành tất cả các loại Phương tiện khu bay có trong đơn vị.","B. Điều khiển- vận hành những loại Phương tiện khu bay mà mình đã qua huấn luyện nghiệp vụ chuyên môn đạt kết quả.","C. Điều khiển - vận hành các loại Phương tiện khu bay đã ghi rõ trong Giấy phép hành nghề."],answer:2},
+{chapterID:"ATHK_FULL",questionID:157,chapter:"ATHK FULL",q:"175. Theo Quyết định số 19/2007/QĐ-BGTVT của Bộ Giao thông vận tải thì nhân viên hàng không bao gồm bao nhiêu chức danh?",options:["A. 12.","B. 15.","C. 20."],answer:0},
+{chapterID:"ATHK_FULL",questionID:158,chapter:"ATHK FULL",q:"176. Nhân viên hàng không phải đáp ứng những tiêu chuẩn và điều kiện nào?",options:["A. Có chứng chỉ chuyên môn do cơ sở đào tạo, huấn luyện nghiệp vụ nhân viên hàng không cấp;","B. Đủ thời gian thực tập và huấn luyện theo quy định;","C. a,b,c đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:159,chapter:"ATHK FULL",q:"177. Các tiêu chuẩn cấp chứng chỉ chuyên môn nhân viên hàng không?",options:["A. Được đào tạo, huấn luyện nghiệp vụ chuyên môn tại cơ sở được Cục Hàng không Việt Nam cấp Giấy chứng nhận (hoặc công nhận) đủ điều kiện đào tạo, huấn luyện nghiệp vụ nhân viên hàng không;","B. Tham dự và đạt kết quả của kỳ thi tốt nghiệp do cơ sở đào tạo, huấn luyện nghiệp vụ nhân viên hàng không;","C. a,b đều đúng."],answer:2},
+{chapterID:"ATHK_FULL",questionID:160,chapter:"ATHK FULL",q:"178. Cục trưởng Cục Hàng không Việt Nam quyết định việc cấp Giấy phép cho cho nhân viên hàng không trong thời hạn bao nhiêu ngày kể từ ngày nhận được báo cáo kết quả của Hội đồng kiểm tra?",options:["A. 15 ngày;","B. 20 ngày;","C. 10 ngày."],answer:0},
+{chapterID:"ATHK_FULL",questionID:161,chapter:"ATHK FULL",q:"179. Thời hạn hiệu lực của năng định ghi trong Giấy phép đối với nhân viên điều khiển, vận hành Phương tiện khu bay là bao nhiêu tháng?",options:["A. 12 tháng;","B. 24 tháng;","C. 36 tháng."],answer:1},
+{chapterID:"ATHK_FULL",questionID:162,chapter:"ATHK FULL",q:"180. Khi phục vụ trên khu bay lái xe phải mang theo những giấy phép gì?",options:["A. Giấy phép lái xe;","B. Giấy phép hành nghề;","C. Giấy phép lái xe và giấy phép hành nghề."],answer:2},
+{chapterID:"ATHK_FULL",questionID:163,chapter:"ATHK FULL",q:"181. Chương trình an ninh hàng không:",options:["A. là chương trình được xây dựng và thiết lập các biện pháp tiêu chuẩn, quy trình xử lý nhằm ngăn chặn, phòng ngừa sẵn sàng chống lại các hành vi can thiệp bất hợp pháp vào hàng không dân dụng.","B. là chương trình được xây dựng và thiết lập các biện pháp tiêu chuẩn, quy trình xử lý nhằm ngăn chặn các hành vi can thiệp bất hợp pháp vào hàng không dân dụng.","C. là chương trình được xây dựng và thiết lập các biện pháp tiêu chuẩn, quy trình xử lý các hành vi can thiệp bất hợp pháp vào hàng không dân dụng."],answer:0},
+{chapterID:"ATHK_FULL",questionID:164,chapter:"ATHK FULL",q:"182. Trách nhiệm của cán bộ, nhân viên của công ty để đảm bảo an toàn, an ninh:",options:["A. Tổ chức kiểm tra, giám sát an ninh đối với người và phương tiện ra vào, hoạt động tại Công ty; quản lý, sử dụng các trang thiết bị, công cụ hỗ trợ được trang bị theo đúng quy định; trực tiếp giải quyết, xử lý hoặc tham gia giải quyết, xử lý các vụ việc vi phạm quy định về an ninh trong khu vực đơn vị quản lý, áp dụng các biện pháp ngăn chặn cần thiết nhằm hạn chế hậu quả xảy ra","B. Sử dụng và bảo quản phương tiện, đồ dùng cá nhân đúng quy định, có trách nhiệm bảo vệ tài sản, trang thiết bị của đơn vị; kịp thời phát hiện và thông báo cho lực lượng bảo vệ an ninh hoặc lãnh đạo đơn vị các hành vi, nguy cơ tiềm ẩn gây mất an ninh tại đơn vị.","C. Tham mưu cho Ban Giám đốc của Công ty về công tác đảm bảo an ninh hàng không và bảo vệ cơ quan doanh nghiệp."],answer:1},
+{chapterID:"ATHK_FULL",questionID:165,chapter:"ATHK FULL",q:"183. Các yếu tố nào cấu thành tội phạm:",options:["A. là hành vi nguy hiểm cho xã hội được quy định trong Hiến pháp, do người có năng lực trách nhiệm và thực hiện một cách cố ý hoặc vô ý.","B. là hành vi nguy hiểm cho xã hội được quy định trong Bộ luật dân sự, do người có năng lực trách nhiệm dân sự và thực hiện một cách cố ý hoặc vô ý.","C. là hành vi nguy hiểm cho xã hội được quy định trong Bộ luật hình sự, do người có năng lực trách nhiệm hình sự và thực hiện một cách cố ý hoặc vô ý."],answer:2},
+{chapterID:"ATHK_FULL",questionID:166,chapter:"ATHK FULL",q:"184. Theo Nghị đinh 81/2010/NĐ-CP ngày 14/9/2010 của Chính phủ về An ninh hàng không và Quyết định 44/2009/QĐ-TTg ngày 26/3/2009 của Thủ tướng Chính phủ về việc ban hành Phương án khẩn nguy tổng thể đối phó với các hành vi can thiệp bất hợp pháp vào hoạt động hàng không dân dụng tại các cảng hàng không, sân bay, hành vi nào sau đây thuộc nhóm hành vi nghiêm trọng cấp độ 1",options:["A. Tấn công lực lượng an ninh hàng không dân dụng, lực lượng bảo vệ để xâm nhập trái pháp luật vào tàu bay, cảng hàng không, sân bay, cơ sở cung cấp dịch vụ bảo đảm hoạt động bay.","B. Tấn công vũ trang có tổ chức tại cảng hàng không, sân bay, công trình, trang thiết bị phục vụ hoạt động bay.","C. Tấn công bằng vũ khí vào lực lượng an ninh hàng không dân dụng, lực lượng bảo vệ cảng hàng không, sân bay, cơ sở cung cấp dịch vụ bảo đảm hoạt động bay."],answer:1},
+{chapterID:"ATHK_FULL",questionID:167,chapter:"ATHK FULL",q:"185. Đối với thẻ kiểm soát an ninh nội bộ cấp cho cán bộ nhân viên của công ty, loại thẻ nào đúng quy định?",options:["A. Thẻ có vạch màu vàng: tương ứng với quyền được phép lên tàu bay; ra vào khu vực hạn chế mức 1 và mức 2.","B. Thẻ có vạch màu vàng: tương ứng với quyền được phép ra vào khu vực hạn chế mức 1 và mức 2.","C. Thẻ có vạch màu vàng: tương ứng với quyền được phép ra vào khu vực hạn chế mức 2."],answer:1},
+{chapterID:"ATHK_FULL",questionID:168,chapter:"ATHK FULL",q:"186. Hành vi nào sau đây không bị cấm trong quá trình kéo đẩy máy bay ?",options:["A. Dùng xe kéo máy bay để số lùi để kéo máy bay.","B. Để người ngồi trên thân cánh máy bay.","C. Kéo chậm hơn tốc độ quy định."],answer:2},
+{chapterID:"ATHK_FULL",questionID:169,chapter:"ATHK FULL",q:"187. Xe thang có được cập bên máy bay khi đã hết khai thác trong ngày không ?",options:["A. Được, trong trường hợp sáng sớm hôm sau có khai thác tiếp.","B. Không được.","C. Được, nếu có sự chỉ đạo của ông giám đốc SAGS hoặc TIAGS."],answer:1},
+{chapterID:"ATHK_FULL",questionID:170,chapter:"ATHK FULL",q:"188. Khi đang hoạt động phục vụ máy bay mà phương tiện, thiết bị hỏng hóc thì nhân viên kỹ thuật phải xử lý như thế nào?",options:["A. Đưa ngay trang thiết bị ra khỏi vị trí đang phục vụ và kéo về vị trí quy định để sửa chữa.","B. Báo cho Trực ban trưởng để TBT điều người đến kéo về nơi quy định.","C. Báo cáo ngay cho thủ trưởng đơn vị để được chỉ đạo giải quyết."],answer:0},
+{chapterID:"ATHK_FULL",questionID:171,chapter:"ATHK FULL",q:"189. Việc rút chèn ra khỏi máy bay chỉ được thực hiện khi:",options:["A. Các trang thiết bị phục vụ đã rời khỏi máy bay.","B. Thợ máy của máy bay yêu cầu.","C. Tổ bay yêu cầu."],answer:0},
+{chapterID:"ATHK_FULL",questionID:172,chapter:"ATHK FULL",q:"190. Khoảng cách an toàn tối thiểu phía sau một máy bay đang lăn là:",options:["A. 125m. ","B. 135m.","C. 150m."],answer:0},
+{chapterID:"ATHK_FULL",questionID:173,chapter:"ATHK FULL",q:"191. Thứ tự tiếp cận nào sau đây là đúng quy trình phục vụ?",options:["A. Xe thang, xe chở khách, xe nâng hàng, xe nạp nhiên liệu, xe khởi động, xe suất ăn, xe vệ sinh.","B. Xe thang, xe chở khách, xe nạp nhiên liệu, xe nâng hàng, xe vệ sinh, xe suất ăn, xe khởi động.","C. Xe nạp nhiên liệu, xe thang, xe chở khách, xe nâng hàng, xe khởi động, xe suất ăn, xe vệ sinh."],answer:0},
+{chapterID:"ATHK_FULL",questionID:174,chapter:"ATHK FULL",q:"192. Người lái xe kéo đẩy máy bay phải được trang bị bộ đàm để có thể liên lạc với:",options:["A. Đài chỉ huy máy bay lăn","B. Đài chỉ huy máy bay lăn và thành viên tổ lái hoặc nhân viên kỹ thuật ngồi trên máy bay.","C. Phi công điều hành chuyến bay."],answer:1},
+{chapterID:"ATHK_FULL",questionID:175,chapter:"ATHK FULL",q:"193. Trước khi đẩy máy bay ra khỏi bến đậu, người lái xe kéo đẩy máy bay phải thông báo cho ai?",options:["A. Thợ máy hoặc thành viên của tổ bay đang ngồi trên buồng lái.","B. Đội chỉ huy máy bay lăn","C. Không phải thông báo cho ai. Chỉ quan sát cẩn thận trước khi đẩy"],answer:1},
+{chapterID:"ATHK_FULL",questionID:176,chapter:"ATHK FULL",q:"194. Khoảng cách an toàn tối thiểu giữa tim đường lăn trong sân đậu và chướng ngại vật là:",options:["A. 40,50m.","B. 42,50m.","C. 45,50m."],answer:1},
+{chapterID:"ATHK_FULL",questionID:177,chapter:"ATHK FULL",q:"195. Động tác nào sau đây không được chấp nhận khi nạp dầu cho máy bay đang có khách ngồi trên:",options:["A. Tiếp viên đứng trực ở các cửa máy bay.","B. Tắt các tín hiệu cấm hút thuốc trên máy bay.","C. Xe thang máy bay phải có sẵn."],answer:1},
+{chapterID:"ATHK_FULL",questionID:178,chapter:"ATHK FULL",q:"196. Khi nạp dầu cho máy bay mà bị tràn ra đất hơn bao nhiêu mét vuông thì phải điều xe cứu hỏa đến để phun nước rửa?",options:["A. 3m2.","B. 4 m2.","C. 5m2."],answer:1},
+{chapterID:"ATHK_FULL",questionID:179,chapter:"ATHK FULL",q:"197. Nếu chỗ dầu tràn rộng quá, có thể ảnh hưởng đến an toàn của máy bay thì phải làm sao?",options:["A. Huy động nhiều xe cứu hỏa ra để phun nước rửa sạch.","B. Dùng bất cứ thứ gì có sẵn như giẻ, cát… để nhanh chóng làm khô chỗ dầu tràn.","C. Tổ chức kéo ngay máy bay đi nơi khác."],answer:2},
+{chapterID:"ATHK_FULL",questionID:180,chapter:"ATHK FULL",q:"198. Các loại phương tiện không thường xuyên ra vào khu vực hoạt động bay một khi được phép vào khu vực sân đậu máy bay thì phải:",options:["A. Kiểm tra an toàn kỹ thuật trước khi vào.","B. Có người hoặc xe của cơ quan/ đơn vị chức năng hướng dẫn.","C. Xuất trình giấy tờ hợp lệ liên quan đến kiểm định an toàn của phương tiện."],answer:1},
+{chapterID:"ATHK_FULL",questionID:181,chapter:"ATHK FULL",q:"199. Khoảng cách an toàn tối thiểu phía trước một máy bay đang lăn là:",options:["A. 125m.","B. 175m.","C. 200m."],answer:2},
+{chapterID:"ATHK_FULL",questionID:182,chapter:"ATHK FULL",q:"200. Xe kéo đẩy máy bay khi thực hiện việc kéo máy bay chỉ được chạy với tốc độ không quá:",options:["A. 10 km/h.","B. 15km/h.","C. 20 km/h."],answer:0},
+
+
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+let wrongQuestions = {}; /* 08/08/26 */
+let reviewWrongMode = false; /* 01/08/26 */
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer) {
+        label.classList.add("wrong");
+        // wrongQuestions.add(q.originalIndex); /* 01/08/26 */
+        if (!wrongQuestions[q.chapterID]) {
+            wrongQuestions[q.chapterID] = new Set();
+        }
+
+        wrongQuestions[q.chapterID].add(q.questionID);
+      }
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  let correct_percentage = ((score / questions.length) * 100).toFixed(2);
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length} (${correct_percentage}%)`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer) {
+      label.classList.add("wrong");
+      if (!wrongQuestions[q.chapterID]) {
+          wrongQuestions[q.chapterID] = new Set();
+      }
+
+      wrongQuestions[q.chapterID].add(q.questionID); /* 08/08/26 */
+    }
+  });
+
+  
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let count = parseInt(document.getElementById("questionCount").value);
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  // Get chapter pool
+  let pool = originalQuestions
+      .filter(q => q.chapter === selectedChapter)
+      .map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */ // ver2 //
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  // Clamp range
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  // Apply range (convert to 0-based index)
+  pool = pool.slice(start - 1, end);
+
+  // Fix count
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  // Deep copy
+  // pool = JSON.parse(JSON.stringify(pool)); // ver 1 //
+  
+  pool = pool.map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */
+
+  // Shuffle questions if enabled
+  if (shuffleEnabled) shuffleArray(pool);
+
+  // Pick N
+  questions = pool.slice(0, count);
+
+  // Shuffle answers if enabled
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  const rangeSize = end - start + 1;
+
+  document.getElementById("questionCount").value = rangeSize;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+
+  // Reset range to full chapter
+  document.getElementById("rangeStart").value = 1;
+  document.getElementById("rangeEnd").value = size;
+}
+
+/* Wrong Quesions Storing and Recalling*/
+function updateWrongQuestionList(){
+
+    const list =
+        document.getElementById("wrongList");
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        list.innerHTML="None";
+        return;
+    }
+
+
+    list.innerHTML =
+        [...wrongQuestions[chapterID]]
+        .sort((a,b)=>a-b)
+        .join(", ");
+
+}
+
+function reviewWrongQuestions(){
+
+    const shuffleEnabled =
+        document.getElementById("shuffleToggle").checked;
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+    
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+    
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        alert("No wrong questions in this chapter.");
+        return;
+    }
+
+
+    // Get only wrong questions
+    let pool =
+        originalQuestions
+        .filter(q =>
+            q.chapterID === chapterID &&
+            wrongQuestions[chapterID]
+            .has(q.questionID)
+        )
+        .map(q =>
+            JSON.parse(JSON.stringify(q))
+        );
+
+
+    // Shuffle question order
+    if (shuffleEnabled) {
+        shuffleArray(pool);
+    }
+
+
+    // Shuffle answers
+    if (shuffleEnabled) {
+        pool.forEach(shuffleOptions);
+    }
+
+
+    questions = pool;
+    // document.getElementById("questionCount").value = questions.length;
+
+    renderQuiz();
+
+}
+
+function clearWrongQuestions(){
+
+    wrongQuestions.clear();
+
+    updateWrongQuestionList();
+
+}
+
+function chapterChanged(){
+
+    updateChapterSize();
+
+    updateWrongQuestionList();
+
+}
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+
+originalQuestions.forEach((q, i) => {
+    q.originalIndex = i;
+});
+
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
