@@ -1,0 +1,990 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz ATHK</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+  border: 2px solid #2e7d32;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+  border: 2px dashed #c62828;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz ATHK</h2>
+<h3>Tự check lại đáp án nhé</h3>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="chapterChanged()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    From:
+    <input type="number" id="rangeStart" value="1" min="1">
+  </label>
+
+  <label>
+    To:
+    <input type="number" id="rangeEnd" value="50" min="1">
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All in range</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+
+  
+  <button onclick="reviewWrongQuestions()">
+  Wrong questions only
+  </button>
+
+</div>
+
+<div id="quiz"></div>
+
+<div id="wrongPanel">
+
+<b>Wrong questions:</b>
+
+<span id="wrongList">
+None
+</span>
+
+<br><br>
+
+<button onclick="reviewWrongQuestions()">
+Wrong questions only
+</button>
+
+<button onclick="clearWrongQuestions()">
+Clear history
+</button>
+
+</div>
+
+<hr>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapterID:"Docwise11",questionID:1,chapter:"1.1. NGỮ PHÁP CHUNG",q:"0. Choose the correct group of words.",options:["A. AIR DISTRIBUTION SYSTEM CONDITIONED AFT CABIN","B. DISTRIBUTION SYSTEM CONDITIONED AIR AFT CABIN","C. AFT CABIN CONDITIONED AIR DISTRIBUTION SYSTEM."],answer:2},
+{chapterID:"Docwise11",questionID:2,chapter:"1.1. NGỮ PHÁP CHUNG",q:"1. Choose the correct group of words",options:["A. LIGHT GENERATOR BREAKER","B. BREAKER GENERATOR LIGHT","C. GENERATOR BREAKER LIGHT"],answer:2},
+{chapterID:"Docwise11",questionID:3,chapter:"1.1. NGỮ PHÁP CHUNG",q:"2. Choose the correct group of words.",options:["A. CONTROL BUTTON RECLINE","B. RECLINE CONTROL BUTTON","C. RECLINE BUTTON CONTROL"],answer:1},
+{chapterID:"Docwise11",questionID:4,chapter:"1.1. NGỮ PHÁP CHUNG",q:"3. Choose the correct group of words.",options:["A. FUEL INTEGRAL TANK","B. FUEL TANK INTEGRAL","C. INTEGRAL FUEL TANK"],answer:2},
+{chapterID:"Docwise11",questionID:5,chapter:"1.1. NGỮ PHÁP CHUNG",q:"4. Choose the correct group of words.",options:["A. RIGHT OUTER WING","B. WING RIGHT OUTER","C. OUTER RIGHT WING"],answer:2},
+{chapterID:"Docwise11",questionID:6,chapter:"1.1. NGỮ PHÁP CHUNG",q:"5. Choose the correct group of words.",options:["A. INNER RIGHT WING TRAILING EDGE","B. TRAILING EDGE INNER RIGHT WING","C. RIGHT INNER TRAILING EDGE WING"],answer:0},
+{chapterID:"Docwise11",questionID:7,chapter:"1.1. NGỮ PHÁP CHUNG",q:"6. Choose the correct group of words.",options:["A. TIP RIGHT WING","B. RIGHT WING TIP","C. WING RIGHT TIP"],answer:1},
+{chapterID:"Docwise11",questionID:8,chapter:"1.1. NGỮ PHÁP CHUNG",q:"7. Choose the correct group of words.",options:["A. LEFT FORWARD PASSENGER DOOR","B. PASSENGER DOOR LEFT FORWARD","C. FORWARD LEFT PASSENGER DOOR"],answer:0},
+{chapterID:"Docwise11",questionID:9,chapter:"1.1. NGỮ PHÁP CHUNG",q:"8. Choose the correct group of words.",options:["A. SAFETY PIN GROUND NOSE GEAR","B. GROUND NOSE GEAR SAFETY PIN","C. NOSE GEAR GROUND SAFETY PIN"],answer:2},
+{chapterID:"Docwise11",questionID:10,chapter:"1.1. NGỮ PHÁP CHUNG",q:"9. Choose the correct group of words.",options:["A. PRESSURE LOW SWITCH WARNING","B. LOW PRESSURE WARNING SWITCH","C. WARNING SWITCH LOW PRESSURE"],answer:1},
+{chapterID:"Docwise11",questionID:11,chapter:"1.1. NGỮ PHÁP CHUNG",q:"10. Choose the correct group of words.",options:["A. CARGO DOOR LOCK FITTINGS","B. CARGO DOOR FITTINGS LOCK","C. FITTINGS LOCK CARGO DOOR"],answer:0},
+{chapterID:"Docwise11",questionID:12,chapter:"1.1. NGỮ PHÁP CHUNG",q:"11. Choose the correct group of words.",options:["A. LIGHT INNER MARKER","B. INNER MARKER LIGHT","C. MARKER INNER LIGHT"],answer:1},
+{chapterID:"Docwise11",questionID:13,chapter:"1.1. NGỮ PHÁP CHUNG",q:"12. Choose the correct group of words.",options:["A. AFT CABIN DISTRIBUTION AIR CONDITIONED SYSTEM","B. CONDITIONED AIR DISTRIBUTION AFT CABIN SYSTEM","C. AFT CABIN CONDITIONED AIR DISTRIBUTION SYSTEM"],answer:2},
+{chapterID:"Docwise11",questionID:14,chapter:"1.1. NGỮ PHÁP CHUNG",q:"13. Choose the correct group of words.",options:["A. LEFT HAND WING TIP FAIRING","B. TIP FAIRING LEFT HAND WING","C. LEFT HAND WING FAIRING TIP"],answer:0},
+{chapterID:"Docwise11",questionID:15,chapter:"1.1. NGỮ PHÁP CHUNG",q:"14. Choose the correct group of words.",options:["A. FLIGHT CREW OXYGEN SYSTEM","B. CREW FLIGHT OXYGEN SYSTEM","C. OXYGEN SYSTEM FLIGHT CREW"],answer:0},
+{chapterID:"Docwise11",questionID:16,chapter:"1.1. NGỮ PHÁP CHUNG",q:"15. Choose the correct group of words.",options:["A. LEFT HAND WING FAIRING TIP","B. TIP FAIRING LEFT HAND WING","C. LEFT HAND WING TIP FAIRING"],answer:2},
+{chapterID:"Docwise11",questionID:17,chapter:"1.1. NGỮ PHÁP CHUNG",q:"16. Choose the correct group of words.",options:["A. CONTROL HANDLE SPOILER","............B. SPOILER CONTROL HANDLE","C. CONTROL SPOILER HANDLE"],answer:1},
+{chapterID:"Docwise11",questionID:18,chapter:"1.1. NGỮ PHÁP CHUNG",q:"17. Choose the correct group of words.",options:["A. RIGHT UPPER TRAILING EDGE","............B. UPPER RIGHT TRAILING EDGE","C. TRAILING EDGE UPPER RIGHT"],answer:1},
+{chapterID:"Docwise11",questionID:19,chapter:"1.1. NGỮ PHÁP CHUNG",q:"18. Choose the correct group of words.",options:["............A. NOSE GEAR INTERPHONE BOX","B. NOSE GEAR BOX INTERPHONE","C. INTERPHONE BOX NOSE GEAR"],answer:0},
+{chapterID:"Docwise11",questionID:20,chapter:"1.1. NGỮ PHÁP CHUNG",q:"19. Choose the correct group of words.",options:["A. AFT BULKHEAD PRESSURE","............B. AFT PRESSURE BULKHEAD","C. PRESSURE BULKHEAD AFT"],answer:1},
+{chapterID:"Docwise11",questionID:21,chapter:"1.1. NGỮ PHÁP CHUNG",q:"20. Choose the correct group of words.",options:["A. DISPLAY LOWER UNIT","B. LOWER DISPLAY UNIT","C. DISPLAY UNIT LOWER"],answer:1},
+{chapterID:"Docwise11",questionID:22,chapter:"1.1. NGỮ PHÁP CHUNG",q:"21. Choose the correct group of words.",options:["A. GEAR MAIN DOORS","B. DOORS MAIN GEAR","C. MAIN GEAR DOORS"],answer:2},
+{chapterID:"Docwise11",questionID:23,chapter:"1.1. NGỮ PHÁP CHUNG",q:"22. Choose the correct group of words.",options:["A. LIGHTING EXTERIOR CONTROL PANEL","B. CONTROL PANEL EXTERIOR LIGHTING","C. EXTERIOR LIGHTING CONTROL PANEL"],answer:2},
+{chapterID:"Docwise11",questionID:24,chapter:"1.1. NGỮ PHÁP CHUNG",q:"23. Choose the correct group of words.",options:["A. POWER GROUND RECEPTACLE ACCESS DOOR","B. GROUND POWER RECEPTACLE ACCESS DOOR","C. ACCESS DOOR GROUND POWER RECEPTACLE"],answer:1},
+{chapterID:"Docwise11",questionID:25,chapter:"1.1. NGỮ PHÁP CHUNG",q:"24. Choose the correct group of words.",options:["A. CABIN SYSTEM TEST AND COCKPIT","B. CABIN SYSTEM AND COCKPIT TEST","C. COCKPIT AND CABIN SYSTEM TEST"],answer:2},
+{chapterID:"Docwise11",questionID:26,chapter:"1.1. NGỮ PHÁP CHUNG",q:"25. Choose the correct group of words.",options:["A. MAIN AIR EXTRACTION DUCT","B. DUCT AIR MAIN EXTRACTION","C. EXTRACTION DUCT MAIN AIR"],answer:0},
+{chapterID:"Docwise11",questionID:27,chapter:"1.1. NGỮ PHÁP CHUNG",q:"26. Choose the correct group of words.",options:["A. CARGO CEILING FORWARD COMPARTMENT PANELS","B. FORWARD CEILING COMPARTMENT CARGO PANELS","C. FORWARD CARGO COMPARTMENT CEILING PANELS"],answer:2},
+{chapterID:"Docwise11",questionID:28,chapter:"1.1. NGỮ PHÁP CHUNG",q:"27. Choose the correct group of words",options:["A. REVERSE OPERATION OR NORMAL THRUST","B. NORMAL REVERSE OR THRUST OPERATION","C. NORMAL OR REVERSE THRUST OPERATION"],answer:2},
+{chapterID:"Docwise11",questionID:29,chapter:"1.1. NGỮ PHÁP CHUNG",q:"28. Choose the correct group of words.",options:["A. ONE PIECE CONICAL STRUCTURE","B. ONE STRUCTURE CONICAL PIECE","C. ONE CONICAL PIECE STRUCTURE"],answer:0},
+{chapterID:"Docwise11",questionID:30,chapter:"1.1. NGỮ PHÁP CHUNG",q:"29. Choose the correct group of words.",options:["A. APU SHUTDOWN PUSHBUTTON SWITCH EMERGENCY","B. APU EMERGENCY SHUTDOWN PUSHBUTTON SWITCH","C. APU PUSHBUTTON SWITCH EMERGENCY SHUTDOWN"],answer:1},
+{chapterID:"Docwise11",questionID:31,chapter:"1.1. NGỮ PHÁP CHUNG",q:"30. Choose the correct group of words.",options:["A. BULK CARGO LOWER DECK COMPARTMENT","B. LOWER DECK BULK CARGO COMPARTMENT","C. BULK CARGO COMPARTMENT LOWER DECK"],answer:1},
+{chapterID:"Docwise11",questionID:32,chapter:"1.1. NGỮ PHÁP CHUNG",q:"31. Choose the correct group of words.",options:["A. PIPE SHROUD DRAINAGE TRIM FUEL","B. FUEL TRIM PIPE SHROUD DRAINAGE","C. FUEL PIPE TRIM DRAINAGE SHROUD"],answer:1},
+{chapterID:"Docwise11",questionID:33,chapter:"1.1. NGỮ PHÁP CHUNG",q:"32. Choose the correct group of words.",options:["A. DEFUEL REFUEL ISOLATION VALVES","B. REFUEL DEFUEL VALVES ISOLATION","C. REFUEL DEFUEL ISOLATION VALVES............"],answer:2},
+{chapterID:"Docwise11",questionID:34,chapter:"1.1. NGỮ PHÁP CHUNG",q:"33. Choose the correct group of words.",options:["A. INTERCHANGEABLE FIXED BODY SERVO CONTROLS ","B. FIXED SERVO CONTROLS INTERCHANGEABLE BODY","C. FIXED INTERCHANGEABLE BODY SERVO CONTROLS"],answer:0},
+{chapterID:"Docwise11",questionID:35,chapter:"1.1. NGỮ PHÁP CHUNG",q:"34. Choose the correct group of words.",options:["A. SEALED IGNITION LEAD CONDUIT","B. CONDUIT SEALED IGNITION LEAD","C. IGNITION LEAD CONDUIT SEALED"],answer:0},
+{chapterID:"Docwise11",questionID:36,chapter:"1.1. NGỮ PHÁP CHUNG",q:"35. Choose the correct group of words.",options:["A. AIR BLEED SYSTEM SUPPLY ENGINE","B. BLEED AIR SYSTEM ENGINE SUPPLY","C. ENGINE BLEED AIR SUPPLY SYSTEM"],answer:2},
+{chapterID:"Docwise11",questionID:37,chapter:"1.1. NGỮ PHÁP CHUNG",q:"36. Choose the correct group of words.",options:["A. GREEN FIRE SHUT-OFF VALVE","B. FIRE SHUT-OFF GREEN VALVE","C. SHUT-OFF VALVE GREEN FIRE"],answer:0},
+{chapterID:"Docwise11",questionID:38,chapter:"1.1. NGỮ PHÁP CHUNG",q:"37. Choose the correct group of words.",options:["A. BRISTLE SOFT NON-METALLIC BRUSH","B. NON-METALLIC SOFT BRISTLE BRUSH","C. SOFT BRUSH NON-METALLIC BRISTLE"],answer:1},
+{chapterID:"Docwise11",questionID:39,chapter:"1.1. NGỮ PHÁP CHUNG",q:"38. Choose the correct group of words.",options:["A. ELECTRICAL POWER EMERGENCY PUSHBUTTON SWITCH","B. EMERGENCY ELECTRICAL POWER PUSHBUTTON SWITCH","C. PUSHBUTTON SWITCH EMERGENCY ELECTRICAL POWER"],answer:1},
+{chapterID:"Docwise11",questionID:40,chapter:"1.1. NGỮ PHÁP CHUNG",q:"39. Choose the correct group of words.",options:["A. FLIGHT CONTROL ELECTRICAL SYSTEM","B. ELECTRICAL FLIGHT CONTROL SYSTEM","C. ELECTRICAL FLIGHT SYSTEM CONTROL"],answer:1},
+{chapterID:"Docwise11",questionID:41,chapter:"1.1. NGỮ PHÁP CHUNG",q:"40. Choose the correct group of words.",options:["A. DOWN LOADING AND UP SYSTEM DATA","B. SYSTEM LOADING UP AND DOWN DATA","C. UP AND DOWN DATA LOADING SYSTEM"],answer:2},
+{chapterID:"Docwise11",questionID:42,chapter:"1.1. NGỮ PHÁP CHUNG",q:"41. Choose the correct group of words.",options:["A. 3.5 INCH DISK DRIVE UNIT","B. DISK DRIVE UNIT 3.5 INCH","C. UNIT DISK DRIVE 3.5 INCH"],answer:0},
+{chapterID:"Docwise11",questionID:43,chapter:"1.1. NGỮ PHÁP CHUNG",q:"42. Choose the correct group of words.",options:["A. FLOOR PROXIMITY EMERGENCY ESCAPE PATH","B. EMERGENCY ESCAPE PROXIMITY FLOOR PATH","C. FLOOR PROXIMITY ESCAPE PATH EMERGENCY"],answer:0},
+{chapterID:"Docwise11",questionID:44,chapter:"1.1. NGỮ PHÁP CHUNG",q:"43. Choose the correct group of words.",options:["A. ROUND TYPE SEAL HOSE","B. ROUND HOSE TYPE SEAL","C. SEAL TYPE ROUND HOSE"],answer:1},
+{chapterID:"Docwise11",questionID:45,chapter:"1.1. NGỮ PHÁP CHUNG",q:"44. Choose the correct group of words.",options:["A. CARGO COMPARTMENT DOOR FORWARD BRACKET HINGE","B. FORWARD CARGO COMPARTMENT DOOR HINGE BRACKET","C. CARGO COMPARTMENT DOOR FORWARD HINGE BRACKET"],answer:1},
+{chapterID:"Docwise11",questionID:46,chapter:"1.1. NGỮ PHÁP CHUNG",q:"45. Bird strikes can damage the fan blades",options:["A. The fan is damaged bird strikes.","B. The fan can damaged by bird strikes.","C. The fan can be damaged by bird strikes."],answer:2},
+{chapterID:"Docwise11",questionID:47,chapter:"1.1. NGỮ PHÁP CHUNG",q:"46. The servos are powered by three hydraulic systems.",options:["A. The servos power three hydraulic systems.","B. Three hydraulic systems power the servos.","C. Three hydraulic systems are powered by the servos."],answer:1},
+{chapterID:"Docwise11",questionID:48,chapter:"1.1. NGỮ PHÁP CHUNG",q:"47. A device monitors voltage and frequency.",options:["A. Voltage and frequency is monitored by a device.","B. Voltage and frequency are monitored by a device.","C. Voltage is monitored by a device and frequency."],answer:1},
+{chapterID:"Docwise11",questionID:49,chapter:"1.1. NGỮ PHÁP CHUNG",q:"48. Smoke is detected by an optical sensor",options:["A. An optical sensor detects smoke.","B. An optical sensor is detected smoke.","C. An optical sensor is detecting smoke."],answer:0},
+{chapterID:"Docwise11",questionID:50,chapter:"1.1. NGỮ PHÁP CHUNG",q:"49. The catering truck brings the beverages to the aircraft.",options:["A. The beverages to aircraft is brought by catering truck.","B. The beverages to aircraft are bring by catering truck.","C. The beverages to the aircraft are brought by the catering truck."],answer:2},
+{chapterID:"Docwise11",questionID:51,chapter:"1.1. NGỮ PHÁP CHUNG",q:"50. A wire connects the unit to the ground.",options:["A. The unit is connected to the ground by a wire.","B. The ground is connected to a wire by the unit.","C. The unit to the ground connects a wire."],answer:0},
+{chapterID:"Docwise11",questionID:52,chapter:"1.1. NGỮ PHÁP CHUNG",q:"51. The control cables are activated by the outboard control valve quadrant.",options:["A. The outboard control valve quadrant is activated the control cables","B. The outboard control valve quadrant actives the control cables","C. The outboard control valve quadrant activates the control cables"],answer:2},
+{chapterID:"Docwise11",questionID:53,chapter:"1.1. NGỮ PHÁP CHUNG",q:"52. The C/B must be safetied",options:["A. You must safe the C/B.","B. You must safety the C/B.","C. You must be safed the C/B"],answer:1},
+{chapterID:"Docwise11",questionID:54,chapter:"1.1. NGỮ PHÁP CHUNG",q:"53. You must set the master switch to OFF.",options:["A. The master switch must be set to OFF","B. The switch must be set to OFF by the master","C. The master switch must set to OFF by you."],answer:0},
+{chapterID:"Docwise11",questionID:55,chapter:"1.1. NGỮ PHÁP CHUNG",q:"54. Bird strikes can damage the fan blades.",options:["A. The fan is damaged bird strikes.","B. The fan can damaged by bird strikes.","C. The fan can be damaged by bird strikes."],answer:2},
+{chapterID:"Docwise11",questionID:56,chapter:"1.1. NGỮ PHÁP CHUNG",q:"55. The length of the fuselage is 37.57 m",options:["A. The fuselage is 37.57 m long","B. 37.57 m length is the fuselage","C. The fuselage’s long is 37.57 m"],answer:0},
+{chapterID:"Docwise11",questionID:57,chapter:"1.1. NGỮ PHÁP CHUNG",q:"56. A device monitors voltage and frequency.",options:["A. Voltage and frequency is monitored by a device.","B. Voltage and frequency are monitored by a device.","C. Voltage is monitored by a device and frequency."],answer:1},
+{chapterID:"Docwise11",questionID:58,chapter:"1.1. NGỮ PHÁP CHUNG",q:"57. Smoke is detected by an optical sensor",options:["A. An optical sensor is detected smoke.","B. An optical sensor detects smoke.","C. An optical sensor is detecting smoke."],answer:1},
+{chapterID:"Docwise11",questionID:59,chapter:"1.1. NGỮ PHÁP CHUNG",q:"58. The catering truck brings the beverages to the aircraft.",options:["A. The beverages to the aircraft is brought by the catering truck.","B. The beverages to the aircraft are brought by the catering truck.","C. The beverages are to the aircraft brought by the catering truck."],answer:1},
+{chapterID:"Docwise11",questionID:60,chapter:"1.1. NGỮ PHÁP CHUNG",q:"59. 3000 psi hydraulic fluid/the metering valve/to the actuator/directs (level 2)",options:["A. 3000 psi hydraulic fluid directs the metering valve to the actuator","B. The metering valve directs 3000 psi hydraulic fluid to the actuator","C. 3000 psi hydraulic fluid directs to the actuator the metering valve"],answer:1},
+{chapterID:"Docwise11",questionID:61,chapter:"1.1. NGỮ PHÁP CHUNG",q:"60. entering the system/to prevent oil/seals/are installed",options:["A. Seals entering the system are installed to prevent oil","B. To prevent oil seals are installed entering the system.","C. Seals are installed to prevent oil entering the system."],answer:2},
+{chapterID:"Docwise11",questionID:62,chapter:"1.1. NGỮ PHÁP CHUNG",q:"61. controls/to dampen yaw axis movement/the yaw damper system/the rudder",options:["A. To dampen yaw axis movement the yaw damper system controls the rudder","B. The yaw damper system controls the rudder to dampen yaw axis movement","C. The rudder controls the yaw damper system to dampen yaw axis movement."],answer:1},
+{chapterID:"Docwise11",questionID:63,chapter:"1.1. NGỮ PHÁP CHUNG",q:"62. a signal/the sensor/to turn on the red warning/provides",options:["A. The sensor provides a signal to turn on the red warning","B. A signal provides the sensor to turn on the red warning","C. To turn on the red warning the sensor provides a signal"],answer:0},
+{chapterID:"Docwise11",questionID:64,chapter:"1.1. NGỮ PHÁP CHUNG",q:"63. the push-button/the system/pushing/resets",options:["A. The push-button resets the system pushing","B. Pushing the system resets the push-button","C. Pushing the push-button resets the system"],answer:2},
+{chapterID:"Docwise11",questionID:65,chapter:"1.1. NGỮ PHÁP CHUNG",q:"64. the valve/opens and closes/to control the fuel flow/an electrical motor",options:["A. An electrical motor opens and closes the valve to control the fuel flow","B. To control the fuel flow the valve opens and closes an electrical motor","C. The valve opens and closes an electrical motor to control the fuel flow"],answer:0},
+{chapterID:"Docwise11",questionID:66,chapter:"1.1. NGỮ PHÁP CHUNG",q:"65. the bleed air temperature/a pre-cooler/controls.",options:["A. Controls the bleed air temperature a pre-cooler.","B. The bleed air temperature a pre-cooler controls.","C. A pre-cooler controls the bleed air temperature."],answer:2},
+{chapterID:"Docwise11",questionID:67,chapter:"1.1. NGỮ PHÁP CHUNG",q:"66. ............with two fasteners/the seat unit/to the seat track/an attachment fitting/attaches. (level 2)",options:["A. The seat unit with two fasteners to the seat track an attachment fitting attaches.","B. An attachment fitting with two fasteners to the seat track attaches the seat unit.","C. An attachment fitting attaches the seat unit to the seat track with two fasteners."],answer:2},
+{chapterID:"Docwise11",questionID:68,chapter:"1.1. NGỮ PHÁP CHUNG",q:"67. inhibits/ an electronic device/ of several transmitters/ the simultaneous selection.",options:["A. The simultaneous selection inhibits of several transmitters an electronic device.","B. An electronic device inhibits the simultaneous selection of several transmitters.","C. An electronic device of several transmitters the simultaneous selection inhibits."],answer:1},
+{chapterID:"Docwise11",questionID:69,chapter:"1.1. NGỮ PHÁP CHUNG",q:"68. ............the 115 V 400 Hz current/ the exciters/ to enable ignition/ into high voltage, pulsating current/ transform (level 2)",options:["A. The exciters transform the 115 V 400 Hz current into high voltage, pulsating current to enable ignition.","B. To enable ignition into high voltage, pulsating current transform the 115 V 400 Hz current the exciters.","C. To enable ignition into high voltage, pulsating current transform the exciters the 115 V 400 Hz current."],answer:0},
+{chapterID:"Docwise11",questionID:70,chapter:"1.1. NGỮ PHÁP CHUNG",q:"69. ............from the engine HP compressor/by a heat exchange process/cools/the pre-cooler/the hot air.",options:["A. The hot air cools the pre-cooler from the engine HP compressor by a heat exchange process.","B. The pre-cooler cools the hot air from the engine HP compressor by a heat exchange process.","C. Cools the hot air by a heat exchange process the pre-cooler from the engine HP compressor."],answer:1},
+{chapterID:"Docwise11",questionID:71,chapter:"1.1. NGỮ PHÁP CHUNG",q:"70. to open the valve/necessary/a minimum upstream pressure of 8 psig/is",options:["A. A minimum upstream pressure of 8 psig is necessary to open the valve.","B. To open the valve is necessary a minimum upstream pressure of 8 psig.","C. A minimum upstream pressure of 8 psig is to open the valve necessary."],answer:0},
+{chapterID:"Docwise11",questionID:72,chapter:"1.1. NGỮ PHÁP CHUNG",q:"71. ............comprises/extending from frame 1 to frame 24/ the lower section of the fuselage/3 skin panels.",options:["A. The lower section of the fuselage comprises 3 skin panels extending from frame 1 to frame 24.","B. 3 skin panels extending from frame 1 to frame 24 comprises the lower section of the fuselage.","C. The lower section of the fuselage extending from frame 1 to frame 24 comprises 3 skin panels."],answer:0},
+{chapterID:"Docwise11",questionID:73,chapter:"1.1. NGỮ PHÁP CHUNG",q:"72. ............to drive the valve/if the other motor does not operate/permits/the gear system/one motor.",options:["A. To drive the valve if the other motor does not operate the gear system permits one motor.","B. If the other motor does not operate the gear system permits to drive the valve one motor.","C. The gear system permits one motor to drive the valve if the other motor does not operate."],answer:2},
+{chapterID:"Docwise11",questionID:74,chapter:"1.1. NGỮ PHÁP CHUNG",q:"73. the position/two switches/according to a logic/give.",options:["A. According to a logic two switches give the position.","B. Two switches give the position according to a logic.","C. Give two switches the position according to a logic."],answer:1},
+{chapterID:"Docwise11",questionID:75,chapter:"1.1. NGỮ PHÁP CHUNG",q:"74. Choose the correct sentence:",options:["A. The flight controls shall be cycled before take-off.","B The flight controls shall cycled before take-off","C. The flight controls shall cycle before take-off."],answer:0},
+{chapterID:"Docwise11",questionID:76,chapter:"1.1. NGỮ PHÁP CHUNG",q:"75. Choose the correct sentence:",options:["A. Both wheels need change if the damage to the tire is not serious.","B. Both wheels need not be changed if the damage to the tire is not serious.","C. Both wheels need be changed if the damage to the tire is not serious."],answer:1},
+{chapterID:"Docwise11",questionID:77,chapter:"1.1. NGỮ PHÁP CHUNG",q:"76. Choose the correct sentence:",options:["A. The oil level be replenished after each flight.","B. The oil level replenish after each flight.","C. The oil level should be replenished after each flight."],answer:2},
+{chapterID:"Docwise11",questionID:78,chapter:"1.1. NGỮ PHÁP CHUNG",q:"77. Choose the correct sentence:",options:["A. The main gear could be towed from the aircraft.","B. The aircraft towed from the main gear.","C. The aircraft could be towed from the main gear."],answer:2},
+{chapterID:"Docwise11",questionID:79,chapter:"1.1. NGỮ PHÁP CHUNG",q:"78. Choose the correct sentence:",options:["A. Stabilizer position indicated by trim indicators.","B. Stabilizer position is indicated by trim indicators.","C. Stabilizer position indicates by trim indicators."],answer:1},
+{chapterID:"Docwise11",questionID:80,chapter:"1.1. NGỮ PHÁP CHUNG",q:"79. Choose the correct sentence:",options:["A. Aileron Trim switches must be operated together.","B. Aileron Trim switches must operated together.","C. Aileron Trim switches must operate together."],answer:0},
+{chapterID:"Docwise11",questionID:81,chapter:"1.1. NGỮ PHÁP CHUNG",q:"80. Choose the correct sentence:",options:["A. The air intakes must be inspected for any damage.","B. Any damage must be inspected for the air intakes.","C. The air intakes inspect any damage."],answer:0},
+{chapterID:"Docwise11",questionID:82,chapter:"1.1. NGỮ PHÁP CHUNG",q:"81. Choose the correct sentence:",options:["A. The control cables activates the outboard control valve quadrant .","B. The outboard control valve quadrant is activated by the control cables.","C. The outboard control valve quadrant activates the control cables."],answer:2},
+{chapterID:"Docwise11",questionID:83,chapter:"1.1. NGỮ PHÁP CHUNG",q:"82. Choose the correct sentence:",options:["A. The weather image displays on the ND.","B. The ND display the weather image.","C. The weather image may be displayed on the ND."],answer:2},
+{chapterID:"Docwise11",questionID:84,chapter:"1.1. NGỮ PHÁP CHUNG",q:"83. Choose the correct sentence:",options:["A. The rudder pedals adjust a screw.","B. The rudder pedals can be adjusted with a screw.","C. A screw can be adjusted with the rudder pedals."],answer:1},
+{chapterID:"Docwise11",questionID:85,chapter:"1.1. NGỮ PHÁP CHUNG",q:"84. Temperatures............drop below zero tomorrow. Careful - it’ll be icy!",options:["A. is will probably","B. will probably","C. are will probably"],answer:1},
+{chapterID:"Docwise11",questionID:86,chapter:"1.1. NGỮ PHÁP CHUNG",q:"85. Temperatures will probably drop below zero tomorrow. Careful - It …. icy!",options:["A. will be","B. is will be","C. are will be"],answer:0},
+{chapterID:"Docwise11",questionID:87,chapter:"1.1. NGỮ PHÁP CHUNG",q:"86. It ….. us about five hours to drive from Frankfurt to Hamburg",options:["A.will take","B. is will take","C. are will take"],answer:0},
+{chapterID:"Docwise11",questionID:88,chapter:"1.1. NGỮ PHÁP CHUNG",q:"87. It will take us about five hours to drive …. Frankfurt …. Hamburg",options:["A.from/to","B. in/on","C. from/in"],answer:0},
+{chapterID:"Docwise11",questionID:89,chapter:"1.1. NGỮ PHÁP CHUNG",q:"88. It will take us about five hours to drive …. Frankfurt …. Hamburg",options:["A.from/to","B.in/on","C.from/in"],answer:0},
+{chapterID:"Docwise11",questionID:90,chapter:"1.1. NGỮ PHÁP CHUNG",q:"89. It will take us ….. five hours to drive from Frankfurt to Hamburg",options:["A.on","B.about","C.in"],answer:1},
+{chapterID:"Docwise11",questionID:91,chapter:"1.1. NGỮ PHÁP CHUNG",q:"90. I’ll help you with your work, if you ….. It won’t take long if we do it together.",options:["A.to want","B.want","C.wants"],answer:1},
+{chapterID:"Docwise11",questionID:92,chapter:"1.1. NGỮ PHÁP CHUNG",q:"91. I…. you with your work, if you want. It won’t take long if we do it together.",options:["A. is will help","B. ’ll help","C. is will to help"],answer:1},
+{chapterID:"Docwise11",questionID:93,chapter:"1.1. NGỮ PHÁP CHUNG",q:"92. I’ll help you with your work, if you want. It won’t............if we do it together.",options:["A. take tim","B. take day","C. take long"],answer:2},
+{chapterID:"Docwise11",questionID:94,chapter:"1.1. NGỮ PHÁP CHUNG",q:"93. I............visit New York at last.",options:["A. am going to","B. is going to","C. are going to"],answer:0},
+{chapterID:"Docwise11",questionID:95,chapter:"1.1. NGỮ PHÁP CHUNG",q:"94. I............pick up the tickets today",options:["A. am going to","B. is going to","C. are going to"],answer:0},
+{chapterID:"Docwise11",questionID:96,chapter:"1.1. NGỮ PHÁP CHUNG",q:"95. I’m going …. visit New York at last.",options:["A.in","B.to","C.on"],answer:1},
+{chapterID:"Docwise11",questionID:97,chapter:"1.1. NGỮ PHÁP CHUNG",q:"96. I’m going ... pick up the tickets today",options:["A.in","B.to","C.on"],answer:1},
+{chapterID:"Docwise11",questionID:98,chapter:"1.1. NGỮ PHÁP CHUNG",q:"97. …. he going to take the job in Berlin?",options:["A.Am","B.Is","C.Are"],answer:1},
+{chapterID:"Docwise11",questionID:99,chapter:"1.1. NGỮ PHÁP CHUNG",q:"98. Is he going….take the job in Berlin?",options:["A.in","B.to","C.on"],answer:1},
+{chapterID:"Docwise11",questionID:100,chapter:"1.1. NGỮ PHÁP CHUNG",q:"99. Is he going to take the job …. Berlin?",options:["A.in","B. to","C. on"],answer:0},
+{chapterID:"Docwise11",questionID:101,chapter:"1.1. NGỮ PHÁP CHUNG",q:"100. I…. to buy the car. I think I’ll wait till next year.",options:["A.am not going ","B. not am going","C. am not go"],answer:0},
+{chapterID:"Docwise11",questionID:102,chapter:"1.1. NGỮ PHÁP CHUNG",q:"101. I ... buy the car. I think I’ll wait till next year.",options:["A.is not going to","B. are not going to","C. am not going to"],answer:2},
+{chapterID:"Docwise11",questionID:103,chapter:"1.1. NGỮ PHÁP CHUNG",q:"102. I …. buy the car. I think I’ll wait till next year.",options:["A.am not going to............","B. not am going to","C. am not go to"],answer:0},
+{chapterID:"Docwise11",questionID:104,chapter:"1.1. NGỮ PHÁP CHUNG",q:"103. I’m not going ... buy the car. I think I’ll wait till next year.",options:["A.in","B. to","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:105,chapter:"1.1. NGỮ PHÁP CHUNG",q:"104. He …. leaving Frankfurt tomorrow to take an A340 course in Toulouse.",options:["A.am","B. is","C. are"],answer:1},
+{chapterID:"Docwise11",questionID:106,chapter:"1.1. NGỮ PHÁP CHUNG",q:"105. He ……. Frankfurt tomorrow to take an A340 course in Toulouse.",options:["A.am leaving","B. are leaving","C. is leaving"],answer:2},
+{chapterID:"Docwise11",questionID:107,chapter:"1.1. NGỮ PHÁP CHUNG",q:"106. He is leaving Frankfurt tomorrow ….. take an A340 course in Toulouse.",options:["A.in","B. to","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:108,chapter:"1.1. NGỮ PHÁP CHUNG",q:"107. He is leaving Frankfurt tomorrow to take …. A340 course in Toulouse.",options:["A.a","B. an","C. the"],answer:1},
+{chapterID:"Docwise11",questionID:109,chapter:"1.1. NGỮ PHÁP CHUNG",q:"108. He is leaving Frankfurt tomorrow to take an A340 course ... Toulouse.",options:["A.in","B. to","C. on"],answer:0},
+{chapterID:"Docwise11",questionID:110,chapter:"1.1. NGỮ PHÁP CHUNG",q:"109. He is ….. Frankfurt tomorrow to take an A340 course in Toulouse.",options:["A.leave","B. leaves","C. leaving"],answer:2},
+{chapterID:"Docwise11",questionID:111,chapter:"1.1. NGỮ PHÁP CHUNG",q:"110. We ….. playing tennis this afternoon. Are you coming to watch",options:["A.am","B.is","C.are"],answer:2},
+{chapterID:"Docwise11",questionID:112,chapter:"1.1. NGỮ PHÁP CHUNG",q:"111. We............tennis this afternoon. Are you coming to watch?",options:["A. am playing","B. is playing","C. are playing"],answer:2},
+{chapterID:"Docwise11",questionID:113,chapter:"1.1. NGỮ PHÁP CHUNG",q:"112. We are playing tennis............afternoon. Are you coming to watch?",options:["A.a","B. an","C. this"],answer:2},
+{chapterID:"Docwise11",questionID:114,chapter:"1.1. NGỮ PHÁP CHUNG",q:"113. We are playing …. this afternoon. Are you coming to watch?",options:["A. a tennis","B. the tennis","C. tennis"],answer:2},
+{chapterID:"Docwise11",questionID:115,chapter:"1.1. NGỮ PHÁP CHUNG",q:"114. We are playing tennis this afternoon. you coming to watch?",options:["A.Am","B.Is","C.Are"],answer:2},
+{chapterID:"Docwise11",questionID:116,chapter:"1.1. NGỮ PHÁP CHUNG",q:"115. We are playing tennis this afternoon. Are you …. to watch?",options:["A.Come","B. Comes","C. coming"],answer:2},
+{chapterID:"Docwise11",questionID:117,chapter:"1.1. NGỮ PHÁP CHUNG",q:"116. We are playing tennis this afternoon. Are you coming …. watch?",options:["A.to","B. in","C. on"],answer:0},
+{chapterID:"Docwise11",questionID:118,chapter:"1.1. NGỮ PHÁP CHUNG",q:"117. We are playing tennis this afternoon. Are you coming …. ?",options:["A. to a watch","B. to the watch","C. to watch"],answer:2},
+{chapterID:"Docwise11",questionID:119,chapter:"1.1. NGỮ PHÁP CHUNG",q:"118. They …. meeting on Wednesday to discuss the problem.",options:["A.am","B.is","C.are"],answer:2},
+{chapterID:"Docwise11",questionID:120,chapter:"1.1. NGỮ PHÁP CHUNG",q:"119. They …. on Wednesday to discuss the problem.",options:["A. am meeting","B. is meeting","C. are meeting"],answer:2},
+{chapterID:"Docwise11",questionID:121,chapter:"1.1. NGỮ PHÁP CHUNG",q:"120. They are meeting …. Wednesday to discuss the problem.",options:["A.in","B.to","C.on"],answer:2},
+{chapterID:"Docwise11",questionID:122,chapter:"1.1. NGỮ PHÁP CHUNG",q:"121. They are meeting on Wednesday …. the problem.",options:["A. to discuss","B. the discuss","C.discuss"],answer:0},
+{chapterID:"Docwise11",questionID:123,chapter:"1.1. NGỮ PHÁP CHUNG",q:"122. They are meeting on Wednesday to discuss …..",options:["A. a problem","B. an problem","C. the problem"],answer:2},
+{chapterID:"Docwise11",questionID:124,chapter:"1.1. NGỮ PHÁP CHUNG",q:"123. Our plane …. at 06:30 the next morning.",options:["A.arrives ","B. is arrive","C. are arrive"],answer:0},
+{chapterID:"Docwise11",questionID:125,chapter:"1.1. NGỮ PHÁP CHUNG",q:"124. Our plane arrives …. 06:30 the next morning.",options:["A.at","B. in","C. on"],answer:0},
+{chapterID:"Docwise11",questionID:126,chapter:"1.1. NGỮ PHÁP CHUNG",q:"125. Our plane arrives at 06:30 the …. morning.",options:["A.in","B. next","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:127,chapter:"1.1. NGỮ PHÁP CHUNG",q:"126. Our plane …. at 06:30 the next morning.",options:["A. arrives","B. arrive","C. arrived"],answer:0},
+{chapterID:"Docwise11",questionID:128,chapter:"1.1. NGỮ PHÁP CHUNG",q:"127. When …. the ferry depart from Dover?",options:["A. do","B. does","C. are"],answer:1},
+{chapterID:"Docwise11",questionID:129,chapter:"1.1. NGỮ PHÁP CHUNG",q:"128. When does the ferry depart ….. Dover?",options:["A. in","B. on","C. from"],answer:2},
+{chapterID:"Docwise11",questionID:130,chapter:"1.1. NGỮ PHÁP CHUNG",q:"129. When does the ferry …. Dover?",options:["A. depart in","B. depart on","C. depart from"],answer:2},
+{chapterID:"Docwise11",questionID:131,chapter:"1.1. NGỮ PHÁP CHUNG",q:"130. The next bus …. Heidelberg leaves this afternoon at 15:10.",options:["A. in","B. to","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:132,chapter:"1.1. NGỮ PHÁP CHUNG",q:"131. The next bus to Heidelberg …. this afternoon at 15:10.",options:["A. leave","B. leaves","C. to leave"],answer:1},
+{chapterID:"Docwise11",questionID:133,chapter:"1.1. NGỮ PHÁP CHUNG",q:"132. The next bus to Heidelberg leaves this afternoon …. 15:10.",options:["A.in","B.on","C.at"],answer:2},
+{chapterID:"Docwise11",questionID:134,chapter:"1.1. NGỮ PHÁP CHUNG",q:"133. The next bus to Heidelberg ………… this afternoon at 15:10. to",options:["A.leaves","B.leave","C.to leaving"],answer:0},
+{chapterID:"Docwise11",questionID:135,chapter:"1.1. NGỮ PHÁP CHUNG",q:"134. The next bus to Heidelberg leaves ... afternoon at 15:10.",options:["A.that","B. the","C. this"],answer:2},
+{chapterID:"Docwise11",questionID:136,chapter:"1.1. NGỮ PHÁP CHUNG",q:"135. What is VARIG?",options:["A. VARIG the South American airline","B. VARIG is an South American airline","C. VARIG is a South American airline"],answer:2},
+{chapterID:"Docwise11",questionID:137,chapter:"1.1. NGỮ PHÁP CHUNG",q:"136. What is GE?",options:["A.GE is a engine manufacturer","B. GE is an engine manufacturer............","C. GE are an engine manufacturer"],answer:1},
+{chapterID:"Docwise11",questionID:138,chapter:"1.1. NGỮ PHÁP CHUNG",q:"137. Who is this man?",options:["A. He is a foreman............","B. He is an foreman","C. He are a foreman"],answer:0},
+{chapterID:"Docwise11",questionID:139,chapter:"1.1. NGỮ PHÁP CHUNG",q:"138. What is Suaheli?",options:["A. Suaheli is an language","B. Suaheli is a language............","C. Suaheli is the language"],answer:1},
+{chapterID:"Docwise11",questionID:140,chapter:"1.1. NGỮ PHÁP CHUNG",q:"139. What kind of a plane is this?",options:["A. This plane is an long-range aircraft","B. This plane are a long-range aircraft","C. This plane is a long-range aircraft"],answer:2},
+{chapterID:"Docwise11",questionID:141,chapter:"1.1. NGỮ PHÁP CHUNG",q:"140. What is this woman’s job?",options:["A.She is flight attendant","B. She is an flight attendant","C. She is a flight attendant"],answer:2},
+{chapterID:"Docwise11",questionID:142,chapter:"1.1. NGỮ PHÁP CHUNG",q:"141. What is ’LAX’?",options:["A.LAX is destination in Lufthansa’s network","B. LAX is a destination in Lufthansa’s network............","C. LAX is an destination in Lufthansa’s network"],answer:1},
+{chapterID:"Docwise11",questionID:143,chapter:"1.1. NGỮ PHÁP CHUNG",q:"142. Who am I?",options:["A. You are a English teacher","B. You is a English teacher","C. You are an English teacher"],answer:2},
+{chapterID:"Docwise11",questionID:144,chapter:"1.1. NGỮ PHÁP CHUNG",q:"143. What is this?",options:["A. This is an uniform","B. This is a uniform............","C. This is uniform"],answer:1},
+{chapterID:"Docwise11",questionID:145,chapter:"1.1. NGỮ PHÁP CHUNG",q:"144. What is Airbus?",options:["A.Airbus are an airplane manufacturer","B. Airbus is an airplane manufacturer............","C. Airbus is a airplane manufacturer"],answer:1},
+{chapterID:"Docwise11",questionID:146,chapter:"1.1. NGỮ PHÁP CHUNG",q:"145. What is the first of May?",options:["A.first of May is an holiday","B. first of May is a holiday............","C. first of May is holiday"],answer:1},
+{chapterID:"Docwise11",questionID:147,chapter:"1.1. NGỮ PHÁP CHUNG",q:"146. What is ’FRA - MIA’?",options:["A.FRA – MIA is an flight leg","B. FRA – MIA is the flight leg","C. FRA – MIA is a flight leg"],answer:2},
+{chapterID:"Docwise11",questionID:148,chapter:"1.1. NGỮ PHÁP CHUNG",q:"147. Who is ’007’?",options:["A. 007 is a British Secret Service employee............","B. 007 is an British Secret Service employee","C. 007 are a British Secret Service employee"],answer:0},
+{chapterID:"Docwise11",questionID:149,chapter:"1.1. NGỮ PHÁP CHUNG",q:"148. What type of a plane is a ’jumbo’?",options:["A.Jumbo is a Boeing 747............","B. Jumbo are a Boeing 747","C. Jumbo is an Boeing 747"],answer:0},
+{chapterID:"Docwise11",questionID:150,chapter:"1.1. NGỮ PHÁP CHUNG",q:"149. What is ECAM?",options:["A.ECAM is aabbreviation","B. ECAM is an abbreviation............","C. ECAM are an abbreviation"],answer:1},
+{chapterID:"Docwise11",questionID:151,chapter:"1.1. NGỮ PHÁP CHUNG",q:"150. What is ’NCE’?",options:["A. NCE is an European three-letter code","B. NCE is a European three-letter code............","C. NCE is European three-letter code"],answer:1},
+{chapterID:"Docwise11",questionID:152,chapter:"1.1. NGỮ PHÁP CHUNG",q:"151. What is Chile?",options:["A. Chile is an long and narrow country","B. Chile is a long and narrow country............","C. Chile are an long and narrow country"],answer:1},
+{chapterID:"Docwise11",questionID:153,chapter:"1.1. NGỮ PHÁP CHUNG",q:"152. What is Heathrow?",options:["A. Hearthrow are a London airport","B. Hearthrow is an London airport","C. Hearthrow is a London airport"],answer:2},
+{chapterID:"Docwise11",questionID:154,chapter:"1.1. NGỮ PHÁP CHUNG",q:"153. What is this building?",options:["A. This building is a maintenance hangar............","B. This building is an maintenance hangar","C. This building is maintenance hangar"],answer:0},
+{chapterID:"Docwise11",questionID:155,chapter:"1.1. NGỮ PHÁP CHUNG",q:"154. What is ATA 32?",options:["A. ATA 32 is an chapter with details on ’Landing Gear’","B. ATA 32 is a chapter with details on ’Landing Gear’............","C. ATA 32 a chapter with details on ’Landing Gear’"],answer:1},
+{chapterID:"Docwise11",questionID:156,chapter:"1.1. NGỮ PHÁP CHUNG",q:"155. This engine is powerful.",options:["A. It is a powerful engine............","B. It are a powerful engine","C. they is a powerful engine"],answer:0},
+{chapterID:"Docwise11",questionID:157,chapter:"1.1. NGỮ PHÁP CHUNG",q:"156. Susan is a pilot.",options:["A. She is a pilot ","B. He are a pilot","C. It is a pilot"],answer:0},
+{chapterID:"Docwise11",questionID:158,chapter:"1.1. NGỮ PHÁP CHUNG",q:"157. The tires are worn",options:["A. He are worn","B. They are worn. ","C. They is worn"],answer:1},
+{chapterID:"Docwise11",questionID:159,chapter:"1.1. NGỮ PHÁP CHUNG",q:"158. Mr. Kant and Mrs. Farmer are foremen.",options:["A. She is foremen","B. He is foremen","C. They are foremen"],answer:2},
+{chapterID:"Docwise11",questionID:160,chapter:"1.1. NGỮ PHÁP CHUNG",q:"159. Some airplanes are in the hangar.",options:["A. He is in the hangar","B. They are in the hangar............","C. It is in the hangar"],answer:1},
+{chapterID:"Docwise11",questionID:161,chapter:"1.1. NGỮ PHÁP CHUNG",q:"160. That module is new.",options:["A. It is a new module............","B. He is a new module","C. They are a new module"],answer:0},
+{chapterID:"Docwise11",questionID:162,chapter:"1.1. NGỮ PHÁP CHUNG",q:"161. These rivets are old.",options:["A. It is old","B. It is old rivets","C. They are old rivets"],answer:2},
+{chapterID:"Docwise11",questionID:163,chapter:"1.1. NGỮ PHÁP CHUNG",q:"162. My colleague Peter is on board of ’ZA’",options:["A. He is on board of ZA............","B. It is on board of ZA","C. They is on board of ZA"],answer:0},
+{chapterID:"Docwise11",questionID:164,chapter:"1.1. NGỮ PHÁP CHUNG",q:"163. CPT is a South African destination.",options:["A. It is a South African destination............","B. They are a South African destination","C. It is an South African destination"],answer:0},
+{chapterID:"Docwise11",questionID:165,chapter:"1.1. NGỮ PHÁP CHUNG",q:"164. APU and CSD are abbreviations.",options:["A. It is abbreviations","B. They is abbreviations","C. They are abbreviations"],answer:2},
+{chapterID:"Docwise11",questionID:166,chapter:"1.1. NGỮ PHÁP CHUNG",q:"165. Lars Schneider is a pilot at Lufthansa.",options:["A. They are a pilot at Lufthansa","B. He is a pilot at Lufthansa............","C. He is an pilot at Lufthansa"],answer:1},
+{chapterID:"Docwise11",questionID:167,chapter:"1.1. NGỮ PHÁP CHUNG",q:"166. The new fasteners are in a box.",options:["A. It is fasteners in a box","B. They are fasteners in a box ","C. They is fasteners in a box"],answer:1},
+{chapterID:"Docwise11",questionID:168,chapter:"1.1. NGỮ PHÁP CHUNG",q:"167. Elevators move up and down.",options:["A. They move up and down............","B. It move up and down","C. They up and down"],answer:0},
+{chapterID:"Docwise11",questionID:169,chapter:"1.1. NGỮ PHÁP CHUNG",q:"168. A rudder moves to the left and right.",options:["A. It to the left and right","B. It moves to the left and right............","C. It moves left and right"],answer:1},
+{chapterID:"Docwise11",questionID:170,chapter:"1.1. NGỮ PHÁP CHUNG",q:"169. English is an important language.",options:["A. It are an important language","B. They are an important language","C. It is an important language"],answer:2},
+{chapterID:"Docwise11",questionID:171,chapter:"1.1. NGỮ PHÁP CHUNG",q:"170. Lufthansa and Iberia are airlines.",options:["A. It is airlines","B. They is airlines","C. They are airlines"],answer:2},
+{chapterID:"Docwise11",questionID:172,chapter:"1.1. NGỮ PHÁP CHUNG",q:"171. The Jumbo Jet is a plane.",options:["A. It is a plane............","B. They are a plane","C. It are a plane"],answer:0},
+{chapterID:"Docwise11",questionID:173,chapter:"1.1. NGỮ PHÁP CHUNG",q:"172. Peter Keller is an airplane mechanic.",options:["A. It is an airplane mechanic","B. She are an airplane mechanic","C. He is an airplane mechanic"],answer:2},
+{chapterID:"Docwise11",questionID:174,chapter:"1.1. NGỮ PHÁP CHUNG",q:"173. CFM-56 and PW2000 are engines.",options:["A. They are engines............","B. It are engines","C. It is engines"],answer:0},
+{chapterID:"Docwise11",questionID:175,chapter:"1.1. NGỮ PHÁP CHUNG",q:"174. Sandra is an electrician at LH.",options:["A. He an electrician at LH","B. She is an electrician at LH ","C. It is an electrician at LH"],answer:1},
+{chapterID:"Docwise11",questionID:176,chapter:"1.1. NGỮ PHÁP CHUNG",q:"175. This ATA chapter is for ’Navigation’.",options:["A. It is for navigation............","B. It is chapter Navigation","C. It is an chapter for Navigation"],answer:0},
+{chapterID:"Docwise11",questionID:177,chapter:"1.1. NGỮ PHÁP CHUNG",q:"176. An A319 is a modern plane.",options:["A. It is modern plane","B. It is a modern plane ","C. It is an modern plane"],answer:1},
+{chapterID:"Docwise11",questionID:178,chapter:"1.1. NGỮ PHÁP CHUNG",q:"177. NLG and MLG are abbreviations.",options:["A. It is abbreviations","B. They is abbreviations","C. They are abbreviations"],answer:2},
+{chapterID:"Docwise11",questionID:179,chapter:"1.1. NGỮ PHÁP CHUNG",q:"178. MAD is a LH destination in Spain.",options:["A. It is LH destination in Spain","B. It is a LH destination in Spain............","C. It is a RH destination in Spain"],answer:1},
+{chapterID:"Docwise11",questionID:180,chapter:"1.1. NGỮ PHÁP CHUNG",q:"179. Susan and Carla are flight attendants",options:["A. Susan and Carla are flight attendants............","B. Susan and Carla is flight attendants","C. Susan is flight attendants"],answer:0},
+{chapterID:"Docwise11",questionID:181,chapter:"1.1. NGỮ PHÁP CHUNG",q:"180. Jennifer Lopez is an actress.",options:["A. They are an actress","B. She is an actress............","C. He is an actress"],answer:1},
+{chapterID:"Docwise11",questionID:182,chapter:"1.1. NGỮ PHÁP CHUNG",q:"181. Linate is an airport in Milan.",options:["A. It is an airport in Milan............","B. It is a airport in Milan","C. It is airport in Milan"],answer:0},
+{chapterID:"Docwise11",questionID:183,chapter:"1.1. NGỮ PHÁP CHUNG",q:"182. A flap is a part of an airplane.",options:["A. It is part of an airplane","B. They are a part of an airplane","C. It is a part of an airplane"],answer:2},
+{chapterID:"Docwise11",questionID:184,chapter:"1.1. NGỮ PHÁP CHUNG",q:"183. The B747 and the B737 are American airplanes.",options:["A. They is Ameriacan airplanes","B. They are Ameriacan airplanes............","C. It is Ameriacan airplanes"],answer:1},
+{chapterID:"Docwise11",questionID:185,chapter:"1.1. NGỮ PHÁP CHUNG",q:"184. Elevators and ailerons are primary flight controls.",options:["A. They is primary flight controls","B. It is primary flight controls","C. They are primary flight controls"],answer:2},
+{chapterID:"Docwise11",questionID:186,chapter:"1.1. NGỮ PHÁP CHUNG",q:"185. Mrs. Smith has 4 stripes on her uniform.",options:["A. She has 4 stripes on her uniform............","B. She has 3 stripes on her uniform","C. He have 4 stripes on her uniform"],answer:0},
+{chapterID:"Docwise11",questionID:187,chapter:"1.1. NGỮ PHÁP CHUNG",q:"186. Dallas and Denver are American cities.",options:["A. It is American cities","B. They are American cities............","C. They are American citie"],answer:1},
+{chapterID:"Docwise11",questionID:188,chapter:"1.1. NGỮ PHÁP CHUNG",q:"187. Flaps and slats are control surfaces.",options:["A. It is control surfaces","B. They control surfaces","C. They are control surfaces"],answer:2},
+{chapterID:"Docwise11",questionID:189,chapter:"1.1. NGỮ PHÁP CHUNG",q:"188. The crane is Lufthansa‘s logo.",options:["A. They are Lufthansa’s logo","B. It is Lufthansa’s logo............","C. It Lufthansa’s logo"],answer:1},
+{chapterID:"Docwise11",questionID:190,chapter:"1.1. NGỮ PHÁP CHUNG",q:"189. Winglets are at the end of the wings.",options:["A. They are at the end of the wings............","B. It is at the end of the wings","C. They at the end of the wings"],answer:0},
+{chapterID:"Docwise11",questionID:191,chapter:"1.1. NGỮ PHÁP CHUNG",q:"190. He worked............MTU ten years ago",options:["A. in","B. on","C. at"],answer:2},
+{chapterID:"Docwise11",questionID:192,chapter:"1.1. NGỮ PHÁP CHUNG",q:"191. We don’t teach…............Saturdays and Sundays.",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:193,chapter:"1.1. NGỮ PHÁP CHUNG",q:"192. The engine oil is…............the can.",options:["A. in","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:194,chapter:"1.1. NGỮ PHÁP CHUNG",q:"193. I went to Cologne............car",options:["A. in","B. by","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:195,chapter:"1.1. NGỮ PHÁP CHUNG",q:"194. I will meet my colleague…............the terminal.",options:["A. in","B. on","C. at"],answer:2},
+{chapterID:"Docwise11",questionID:196,chapter:"1.1. NGỮ PHÁP CHUNG",q:"195. I went to Rome…............plane.",options:["A. by","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:197,chapter:"1.1. NGỮ PHÁP CHUNG",q:"196. He is cleaning the bulb............using a special liquid.",options:["A. in","B. by","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:198,chapter:"1.1. NGỮ PHÁP CHUNG",q:"197. I was here............seven o’clock.",options:["A. in","B. on","C. at"],answer:2},
+{chapterID:"Docwise11",questionID:199,chapter:"1.1. NGỮ PHÁP CHUNG",q:"198. There are antennas……the roof.",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:200,chapter:"1.1. NGỮ PHÁP CHUNG",q:"199. The carpet is............the floor",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:201,chapter:"1.1. NGỮ PHÁP CHUNG",q:"200. We don’t smoke…. our workshop.",options:["A. in","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:202,chapter:"1.1. NGỮ PHÁP CHUNG",q:"201. I get a telephone line……pushing the button",options:["A. in","B. by","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:203,chapter:"1.1. NGỮ PHÁP CHUNG",q:"202. Passengers don’t smoke…............board of Lufthansa aircraft.",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:204,chapter:"1.1. NGỮ PHÁP CHUNG",q:"203. I often drink a cup of tea……the afternoon.",options:["A. in","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:205,chapter:"1.1. NGỮ PHÁP CHUNG",q:"204. There was a lot of dirt............the surface.",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:206,chapter:"1.1. NGỮ PHÁP CHUNG",q:"205. Books and pens are............our tables",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:207,chapter:"1.1. NGỮ PHÁP CHUNG",q:"206. We are …... a classroom............LTT.",options:["A. in","B. on","C. in/at"],answer:2},
+{chapterID:"Docwise11",questionID:208,chapter:"1.1. NGỮ PHÁP CHUNG",q:"207. The English course will end…….a Friday............2 o’clock.",options:["A. in","B. on/at","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:209,chapter:"1.1. NGỮ PHÁP CHUNG",q:"208. There is a conversion table…............The wall.",options:["A. in","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:210,chapter:"1.1. NGỮ PHÁP CHUNG",q:"209. Some engines are made…............General Electric.",options:["A. in","B. on","C. at"],answer:2},
+{chapterID:"Docwise11",questionID:211,chapter:"1.1. NGỮ PHÁP CHUNG",q:"210. Lufthansa keeps its planes in good condition............checking them regularly.",options:["A. in","B. by","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:212,chapter:"1.1. NGỮ PHÁP CHUNG",q:"211. We have job tickets, so we can come to work............public transportation.",options:["A. in","B. by","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:213,chapter:"1.1. NGỮ PHÁP CHUNG",q:"212. The manuals are written…............Boeing.",options:["A. in","B. on","C. by"],answer:2},
+{chapterID:"Docwise11",questionID:214,chapter:"1.1. NGỮ PHÁP CHUNG",q:"213. Many of my colleagues live…............Frankfurt.",options:["A. in","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:215,chapter:"1.1. NGỮ PHÁP CHUNG",q:"214. We spend our lunch time............the canteen.",options:["A. in","B. on","C. at"],answer:2},
+{chapterID:"Docwise11",questionID:216,chapter:"1.1. NGỮ PHÁP CHUNG",q:"215. Adjust the fastener............turning it.",options:["A. in","B. on","C. by"],answer:2},
+{chapterID:"Docwise11",questionID:217,chapter:"1.1. NGỮ PHÁP CHUNG",q:"216. There are many pages and illustrations….the manuals.",options:["A. in","B. on","C. by"],answer:0},
+{chapterID:"Docwise11",questionID:218,chapter:"1.1. NGỮ PHÁP CHUNG",q:"217. He came to the base quickly............taking his car and not the train.",options:["A. in","B. on","C. by"],answer:2},
+{chapterID:"Docwise11",questionID:219,chapter:"1.1. NGỮ PHÁP CHUNG",q:"218. Remove all dirt…............the structure.",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:220,chapter:"1.1. NGỮ PHÁP CHUNG",q:"219. I need my airline ID-card…............enter the Lufthansa base.",options:["A. from","B. of","C. to"],answer:2},
+{chapterID:"Docwise11",questionID:221,chapter:"1.1. NGỮ PHÁP CHUNG",q:"220. The A340 has a range............12,800 kilometers.",options:["A. from","B. of............","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:222,chapter:"1.1. NGỮ PHÁP CHUNG",q:"221. fly you need a ticket.",options:["A. from","B. of","C. to"],answer:2},
+{chapterID:"Docwise11",questionID:223,chapter:"1.1. NGỮ PHÁP CHUNG",q:"222. I am............Germany.",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:224,chapter:"1.1. NGỮ PHÁP CHUNG",q:"223. He removed the old carpet…............the floor.",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:225,chapter:"1.1. NGỮ PHÁP CHUNG",q:"224. The fuel consumption............older engines is quite high.",options:["A. from","B. of............","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:226,chapter:"1.1. NGỮ PHÁP CHUNG",q:"225. The module is damaged, so we must remove it…............the system",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:227,chapter:"1.1. NGỮ PHÁP CHUNG",q:"226. Keep away............running engines.",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:228,chapter:"1.1. NGỮ PHÁP CHUNG",q:"227. It will take about an hour…............replace these valves",options:["A. from","B. of","C. to"],answer:2},
+{chapterID:"Docwise11",questionID:229,chapter:"1.1. NGỮ PHÁP CHUNG",q:"228. This plane is flying…….Frankfurt to Chicago at 1 o’clock.",options:["A. from............","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:230,chapter:"1.1. NGỮ PHÁP CHUNG",q:"229. The Fokker 50 has a cruising speed…............510 km/h.",options:["A. from","B. of............","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:231,chapter:"1.1. NGỮ PHÁP CHUNG",q:"230. Electricians inspect the electrical parts… the airplanes.",options:["A. from","B. of............","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:232,chapter:"1.1. NGỮ PHÁP CHUNG",q:"231. This part is made............Titanium.",options:["A. from","B. of............","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:233,chapter:"1.1. NGỮ PHÁP CHUNG",q:"232. Examine the part…............make sure that its condition is o.k.",options:["A. From","B. Of","C. to"],answer:2},
+{chapterID:"Docwise11",questionID:234,chapter:"1.1. NGỮ PHÁP CHUNG",q:"233. The airplanes have their pre-flight check…............each flight.",options:["A. after","B. before","C. behind"],answer:1},
+{chapterID:"Docwise11",questionID:235,chapter:"1.1. NGỮ PHÁP CHUNG",q:"234. The bus terminal is............the airport terminal.",options:["A. after","B. before","C. in front of"],answer:2},
+{chapterID:"Docwise11",questionID:236,chapter:"1.1. NGỮ PHÁP CHUNG",q:"235. Passengers go on board............they have checked in.",options:["A. after","B. before","C. behind"],answer:0},
+{chapterID:"Docwise11",questionID:237,chapter:"1.1. NGỮ PHÁP CHUNG",q:"236. Seat row 6 is…............seat row 5.",options:["A. in front of","B. before","C. behind"],answer:2},
+{chapterID:"Docwise11",questionID:238,chapter:"1.1. NGỮ PHÁP CHUNG",q:"237. the English course I go home directly.",options:["A. after","B. before","C. behind"],answer:0},
+{chapterID:"Docwise11",questionID:239,chapter:"1.1. NGỮ PHÁP CHUNG",q:"238. landing the passengers pick up their luggage.",options:["A. After","B. Before","C. Behind"],answer:0},
+{chapterID:"Docwise11",questionID:240,chapter:"1.1. NGỮ PHÁP CHUNG",q:"239. The cockpit in Lufthansa’s B747s is…............the First Class on the upper deck.",options:["A. in front of","B. before","C. behind"],answer:0},
+{chapterID:"Docwise11",questionID:241,chapter:"1.1. NGỮ PHÁP CHUNG",q:"240. installing the rivets, recheck their seat.",options:["A. after","B. before","C. behind"],answer:0},
+{chapterID:"Docwise11",questionID:242,chapter:"1.1. NGỮ PHÁP CHUNG",q:"241. Take everything away from the inlet of the engine…............you start the engine.",options:["A. in front of","B. before","C. behind"],answer:1},
+{chapterID:"Docwise11",questionID:243,chapter:"1.1. NGỮ PHÁP CHUNG",q:"242. beginning the repair work I read the working instructions.",options:["A. after","B. before","C. behind"],answer:1},
+{chapterID:"Docwise11",questionID:244,chapter:"1.1. NGỮ PHÁP CHUNG",q:"243. Usually you find the Economy Class…............the Business Class.",options:["A. after","B. before","C. behind"],answer:2},
+{chapterID:"Docwise11",questionID:245,chapter:"1.1. NGỮ PHÁP CHUNG",q:"244. ten flight attendants in its cabin crew",options:["A. There are","B. There is","C. Have"],answer:0},
+{chapterID:"Docwise11",questionID:246,chapter:"1.1. NGỮ PHÁP CHUNG",q:"245. a lower and an upper ruder in the A/C B737",options:["A. There are","B. There is","C. There was"],answer:0},
+{chapterID:"Docwise11",questionID:247,chapter:"1.1. NGỮ PHÁP CHUNG",q:"246. Last year, ............one flight per day from Hamburg to Milan.",options:["A. There is","B. There was","C. There were"],answer:1},
+{chapterID:"Docwise11",questionID:248,chapter:"1.1. NGỮ PHÁP CHUNG",q:"247. ............six airlines in the Star Alliance when it was founded.",options:["A. There are","B. There was","C. There were"],answer:2},
+{chapterID:"Docwise11",questionID:249,chapter:"1.1. NGỮ PHÁP CHUNG",q:"248. After the first lesson today, there (are / were / will be) a 30 minute break",options:["A. are","B. were","C. will be"],answer:2},
+{chapterID:"Docwise11",questionID:250,chapter:"1.1. NGỮ PHÁP CHUNG",q:"249. There (is / are / were) a life vest under each seat",options:["A. is","B. are","C. were"],answer:0},
+{chapterID:"Docwise11",questionID:251,chapter:"1.1. NGỮ PHÁP CHUNG",q:"250. There (is / are / was) shelves in our workshop for the storage of oxygen cylinders",options:["A. is","B. are","C. was"],answer:1},
+{chapterID:"Docwise11",questionID:252,chapter:"1.1. NGỮ PHÁP CHUNG",q:"251. There (are / is / was) four CFM56--5C engines on Lufthansa’s A340--300s",options:["A. are","B. is","C. was"],answer:0},
+{chapterID:"Docwise11",questionID:253,chapter:"1.1. NGỮ PHÁP CHUNG",q:"252. (............) the part within the necessary tolerances.",options:["A. do adjust","B. do not adujst","C. Adjust"],answer:2},
+{chapterID:"Docwise11",questionID:254,chapter:"1.1. NGỮ PHÁP CHUNG",q:"253. (............) this fluid for refilling if it is not approved",options:["A. take","B. do not take","C. do take"],answer:1},
+{chapterID:"Docwise11",questionID:255,chapter:"1.1. NGỮ PHÁP CHUNG",q:"254. (............) oxygen cylinders against extreme temperatures",options:["A. do not protect","B. Protect","C. did protect"],answer:1},
+{chapterID:"Docwise11",questionID:256,chapter:"1.1. NGỮ PHÁP CHUNG",q:"255. Never (............) the cabin doors open without safeties",options:["A. leave","B. do not leave","C. did leave"],answer:0},
+{chapterID:"Docwise11",questionID:257,chapter:"1.1. NGỮ PHÁP CHUNG",q:"256. (............) tag the part for better identification.",options:["A. care","B. carefully","C. never"],answer:1},
+{chapterID:"Docwise11",questionID:258,chapter:"1.1. NGỮ PHÁP CHUNG",q:"257. ............the flat wheel from the axle",options:["A. remove","B. jack","C. drive"],answer:0},
+{chapterID:"Docwise11",questionID:259,chapter:"1.1. NGỮ PHÁP CHUNG",q:"258. Do not ............the test switch while the test is in progress.",options:["A. Install","B. push","C. remove"],answer:1},
+{chapterID:"Docwise11",questionID:260,chapter:"1.1. NGỮ PHÁP CHUNG",q:"259. the surface of the fuselage for cracks",options:["A. Inspect","B. test","C. remove"],answer:0},
+{chapterID:"Docwise11",questionID:261,chapter:"1.1. NGỮ PHÁP CHUNG",q:"260. ............parking brake before pushback",options:["A. set up","B. test","C. set"],answer:2},
+{chapterID:"Docwise11",questionID:262,chapter:"1.1. NGỮ PHÁP CHUNG",q:"261. Always............the locking pins before flight.",options:["A. remove","B. set","C. install"],answer:0},
+{chapterID:"Docwise11",questionID:263,chapter:"1.1. NGỮ PHÁP CHUNG",q:"262. ............gloves to protect your hands.",options:["A. set up","B. bring","C. wear"],answer:2},
+{chapterID:"Docwise11",questionID:264,chapter:"1.1. NGỮ PHÁP CHUNG",q:"263. ............the tire pressure before flight.",options:["A. Inspect","B. check","C. set"],answer:1},
+{chapterID:"Docwise11",questionID:265,chapter:"1.1. NGỮ PHÁP CHUNG",q:"264. ............use the improper tools for the job.",options:["A. do","B. do not","C. did"],answer:1},
+{chapterID:"Docwise11",questionID:266,chapter:"1.1. NGỮ PHÁP CHUNG",q:"265. ............re-use a deformed cotter pin",options:["A. do","B. do not","C. did"],answer:1},
+{chapterID:"Docwise11",questionID:267,chapter:"1.1. NGỮ PHÁP CHUNG",q:"266. How often a month ............you have night shift",options:["A. do","B. does","C. do not"],answer:0},
+{chapterID:"Docwise11",questionID:268,chapter:"1.1. NGỮ PHÁP CHUNG",q:"267. The A340--600 ............a very long airplane",options:["A. am","B. is","C. are"],answer:1},
+{chapterID:"Docwise11",questionID:269,chapter:"1.1. NGỮ PHÁP CHUNG",q:"268. The smaller Airbuses ............the planes which fly Lufthansa’s domestic routes.",options:["A. am","B. is","C. are"],answer:2},
+{chapterID:"Docwise11",questionID:270,chapter:"1.1. NGỮ PHÁP CHUNG",q:"269. All my colleagues in this classroom ............mechanics",options:["A. am","B. is","C. are"],answer:2},
+{chapterID:"Docwise11",questionID:271,chapter:"1.1. NGỮ PHÁP CHUNG",q:"270. The A320, A319, and the B737 (............) between Frankfurt and Hamburg.",options:["A. flies","B. fly","C. does not fly"],answer:1},
+{chapterID:"Docwise11",questionID:272,chapter:"1.1. NGỮ PHÁP CHUNG",q:"271. ............Men and women who (serve / do not serve / serves) the passengers on board are called flight attendants.",options:["A. serve","B. do not serve","C. serves"],answer:0},
+{chapterID:"Docwise11",questionID:273,chapter:"1.1. NGỮ PHÁP CHUNG",q:"272. What (do / does / does not) an upholsterer do at Lufthansa?",options:["A. do","B. does","C. does not"],answer:1},
+{chapterID:"Docwise11",questionID:274,chapter:"1.1. NGỮ PHÁP CHUNG",q:"273. David is an A320 co-pilot. He ............short haul routes",options:["A. Flies","B. Fly","C. does fly"],answer:0},
+{chapterID:"Docwise11",questionID:275,chapter:"1.1. NGỮ PHÁP CHUNG",q:"274. The electricians ............the systems during the night-stop",options:["A. Press","B. do press","C. presses"],answer:0},
+{chapterID:"Docwise11",questionID:276,chapter:"1.1. NGỮ PHÁP CHUNG",q:"275. The pilot ............the landing gear during the approach",options:["A. extends","B. extendes","C. extend"],answer:0},
+{chapterID:"Docwise11",questionID:277,chapter:"1.1. NGỮ PHÁP CHUNG",q:"276 - 1. Lufthansa ............(1)............engines in Sydney. We ............(2)............ them at the Overhaul Base in Hamburg",options:["A. overhaul","B. do not overhaul","C. overhauls"],answer:2},
+{chapterID:"Docwise11",questionID:278,chapter:"1.1. NGỮ PHÁP CHUNG",q:"276 - 2. Lufthansa ............(1)............engines in Sydney. We ............(2)............ them at the Overhaul Base in Hamburg",options:["A. overhaul","B. do not overhaul","C. overhauls"],answer:0},
+{chapterID:"Docwise11",questionID:279,chapter:"1.1. NGỮ PHÁP CHUNG",q:"277 - 1. If you (1)............the word, you can ask somebody who (2)............it. (1)",options:["A. Know","B. do not know","C. does not know"],answer:1},
+{chapterID:"Docwise11",questionID:280,chapter:"1.1. NGỮ PHÁP CHUNG",q:"277 - 2. If you (1)............the word, you can ask somebody who (2)............it. (1)",options:["A. did know","B. knows","C. known"],answer:1},
+{chapterID:"Docwise11",questionID:281,chapter:"1.1. NGỮ PHÁP CHUNG",q:"278. If you see a British Airways A320 in Hamburg, you know it ............to London.",options:["A. did fly","B. flying","C. is flying"],answer:2},
+{chapterID:"Docwise11",questionID:282,chapter:"1.1. NGỮ PHÁP CHUNG",q:"279. If a person listens at the classroom door, he knows we ............English",options:["A. are learing","B. did not learn","C. learns"],answer:0},
+{chapterID:"Docwise11",questionID:283,chapter:"1.1. NGỮ PHÁP CHUNG",q:"280. That aircraft ............ to Chicago at one o’clock",options:["A. are flying","B. is flying","C. am flying"],answer:1},
+{chapterID:"Docwise11",questionID:284,chapter:"1.1. NGỮ PHÁP CHUNG",q:"281. A lot of apprentices ............repair work on various aircraft now",options:["A. is doing","B. am doing","C. are doing"],answer:2},
+{chapterID:"Docwise11",questionID:285,chapter:"1.1. NGỮ PHÁP CHUNG",q:"282 - 1. The men in blue overalls _(1)........................ in the hangar. Let’s look what they   (2).............",options:["A. is working","B. are working","C. isn't working"],answer:1},
+{chapterID:"Docwise11",questionID:286,chapter:"1.1. NGỮ PHÁP CHUNG",q:"282 - 2. The men in blue overalls _(1)........................ in the hangar. Let’s look what they   (2).............",options:["A. is doing","B. am doing","C. are doing"],answer:2},
+{chapterID:"Docwise11",questionID:287,chapter:"1.1. NGỮ PHÁP CHUNG",q:"284. Two mechanics ............ that system for faults",options:["A. am checking","B. are checking","C. is checking"],answer:1},
+{chapterID:"Docwise11",questionID:288,chapter:"1.1. NGỮ PHÁP CHUNG",q:"285. Approximately 160 of the planes in the fleet ............at the moment.",options:["A. are flying","B. is flying","C. am flying"],answer:0},
+{chapterID:"Docwise11",questionID:289,chapter:"1.1. NGỮ PHÁP CHUNG",q:"286 - 1. Today the planes(1)............to the West, because the wind (2)........................from there.",options:["A. Take off","B. taking off","C. are taking off"],answer:2},
+{chapterID:"Docwise11",questionID:290,chapter:"1.1. NGỮ PHÁP CHUNG",q:"286 - 2. Today the planes(1)............to the West, because the wind (2)........................from there.",options:["A. comes","B. come","C. is coming"],answer:2},
+{chapterID:"Docwise11",questionID:291,chapter:"1.1. NGỮ PHÁP CHUNG",q:"287 - 1. My wife (1)............because we (2)............children.",options:["A. do not work","B. work","C. does not work"],answer:2},
+{chapterID:"Docwise11",questionID:292,chapter:"1.1. NGỮ PHÁP CHUNG",q:"287 - 2. My wife (1)............because we (2)............children.",options:["A. have","B. has","C. had"],answer:0},
+{chapterID:"Docwise11",questionID:293,chapter:"1.1. NGỮ PHÁP CHUNG",q:"288. The B727 ............in service until 1992",options:["A. was","B. were","C. are"],answer:0},
+{chapterID:"Docwise11",questionID:294,chapter:"1.1. NGỮ PHÁP CHUNG",q:"289. More than 90 million people ............our passengers in 2010",options:["A. was","B. were","C. are"],answer:1},
+{chapterID:"Docwise11",questionID:295,chapter:"1.1. NGỮ PHÁP CHUNG",q:"290. There............several basic types of aircraft in service now",options:["A. are","B. were","C. was"],answer:0},
+{chapterID:"Docwise11",questionID:296,chapter:"1.1. NGỮ PHÁP CHUNG",q:"291. When did he ............the deformed washers?",options:["A. work","B. worked","C. is working"],answer:0},
+{chapterID:"Docwise11",questionID:297,chapter:"1.1. NGỮ PHÁP CHUNG",q:"292. He ............the people the structural repair workshop yesterday",options:["A. Show","B. Shaw","C. showed"],answer:2},
+{chapterID:"Docwise11",questionID:298,chapter:"1.1. NGỮ PHÁP CHUNG",q:"293. They ............a new car last year",options:["A. buy","B. bought","C. buyed"],answer:1},
+{chapterID:"Docwise11",questionID:299,chapter:"1.1. NGỮ PHÁP CHUNG",q:"294. They ............on holiday in Sweden last week.",options:["A. be","B. are","C. were"],answer:2},
+{chapterID:"Docwise11",questionID:300,chapter:"1.1. NGỮ PHÁP CHUNG",q:"295 - 1. Did you (1)............any problems when you \n(2)............on the course in Seattle?",options:["A. have","B. has","C. had"],answer:0},
+{chapterID:"Docwise11",questionID:301,chapter:"1.1. NGỮ PHÁP CHUNG",q:"295 - 2. Did you (1)............any problems when you \n(2)............on the course in Seattle?",options:["A. are","B. was","C. were"],answer:2},
+{chapterID:"Docwise11",questionID:302,chapter:"1.1. NGỮ PHÁP CHUNG",q:"296. ............our boss at the ILA in Berlin last year?",options:["A. had","B. were","C. was"],answer:2},
+{chapterID:"Docwise11",questionID:303,chapter:"1.1. NGỮ PHÁP CHUNG",q:"297. there a special reason to go to Paris?",options:["A. Is","B. was","C. were"],answer:0},
+{chapterID:"Docwise11",questionID:304,chapter:"1.1. NGỮ PHÁP CHUNG",q:"298. Where do you work?",options:["A. We work at Lufthansa","B. We work in Lufthansa","C. We work by Lufthansa"],answer:0},
+{chapterID:"Docwise11",questionID:305,chapter:"1.1. NGỮ PHÁP CHUNG",q:"299. The airplane could not land ……fog.",options:["A. because","B. between","C. due to"],answer:2},
+{chapterID:"Docwise11",questionID:306,chapter:"1.1. NGỮ PHÁP CHUNG",q:"300. My car is….. the house",options:["A. in front of","B. before","C. after"],answer:0},
+{chapterID:"Docwise11",questionID:307,chapter:"1.1. NGỮ PHÁP CHUNG",q:"301. Keep away…..sparks and flmaes",options:["A. to","B. at","C. from"],answer:2},
+{chapterID:"Docwise11",questionID:308,chapter:"1.1. NGỮ PHÁP CHUNG",q:"302. The mechanics checked D-ABVX …..one hour",options:["A. with","B. within","C. without"],answer:1},
+{chapterID:"Docwise11",questionID:309,chapter:"1.1. NGỮ PHÁP CHUNG",q:"303. The bus shuttles............the airport terminal and the base.",options:["A. before","B. about","C. between"],answer:2},
+{chapterID:"Docwise11",questionID:310,chapter:"1.1. NGỮ PHÁP CHUNG",q:"304. I think the repair will cost…… 200 Euros",options:["A. about","B. dute to","C. according to"],answer:0},
+{chapterID:"Docwise11",questionID:311,chapter:"1.1. NGỮ PHÁP CHUNG",q:"305. He works…… Condor/Cargo Technik in Frankfurt",options:["A. at","B. on","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:312,chapter:"1.1. NGỮ PHÁP CHUNG",q:"306. The pilot left the cruising altitude............a loss of pressure.",options:["A. because of","B. about","C. between"],answer:0},
+{chapterID:"Docwise11",questionID:313,chapter:"1.1. NGỮ PHÁP CHUNG",q:"307. You must work…............the safety regulations.",options:["A. because","B. according to","C. without"],answer:1},
+{chapterID:"Docwise11",questionID:314,chapter:"1.1. NGỮ PHÁP CHUNG",q:"308. These sentences were written…… an English teacher.",options:["A. with","B. at","C. by"],answer:2},
+{chapterID:"Docwise11",questionID:315,chapter:"1.1. NGỮ PHÁP CHUNG",q:"309. Keep the correct distance............the fuel tanker and the plane.",options:["A. between","B. dute to","C. about"],answer:0},
+{chapterID:"Docwise11",questionID:316,chapter:"1.1. NGỮ PHÁP CHUNG",q:"310. The fan cowl panels are equipped ……locks.",options:["A. with","B. within","C. without"],answer:0},
+{chapterID:"Docwise11",questionID:317,chapter:"1.1. NGỮ PHÁP CHUNG",q:"311. Keep a distance of 25 feet…............airplanes when you park them.",options:["A. without","B. between","C. by"],answer:1},
+{chapterID:"Docwise11",questionID:318,chapter:"1.1. NGỮ PHÁP CHUNG",q:"312. Stop the fuel tanker 60 meters............the aircraft nose.",options:["A. without","B. from","C. because"],answer:1},
+{chapterID:"Docwise11",questionID:319,chapter:"1.1. NGỮ PHÁP CHUNG",q:"313. You can see a black line… the wings of our aircraft.",options:["A. on","B. dute to","C. before"],answer:0},
+{chapterID:"Docwise11",questionID:320,chapter:"1.1. NGỮ PHÁP CHUNG",q:"314. 50 manhours are needed for this repair.",options:["A. to","B. Appoximately","C. after"],answer:1},
+{chapterID:"Docwise11",questionID:321,chapter:"1.1. NGỮ PHÁP CHUNG",q:"315. Do not repair gaps which are…............the limits.",options:["A. within","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:322,chapter:"1.1. NGỮ PHÁP CHUNG",q:"316. understand the text I need some English.",options:["A. within","B. to","C. Appoximately"],answer:1},
+{chapterID:"Docwise11",questionID:323,chapter:"1.1. NGỮ PHÁP CHUNG",q:"317. Aircraft mechanics inspect the mechanical systems…… airplanes.",options:["A. after","B. of","C. to"],answer:1},
+{chapterID:"Docwise11",questionID:324,chapter:"1.1. NGỮ PHÁP CHUNG",q:"318. installing the fasteners, recheck them.",options:["A. after","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:325,chapter:"1.1. NGỮ PHÁP CHUNG",q:"319. It is required to examine the airplane…............each flight.",options:["A. before","B. of","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:326,chapter:"1.1. NGỮ PHÁP CHUNG",q:"320. Washington DC is……a flight hour away from New York.",options:["A. before","B. of","C. about"],answer:2},
+{chapterID:"Docwise11",questionID:327,chapter:"1.1. NGỮ PHÁP CHUNG",q:"321. Remove all dirt……the structure.",options:["A. before","B. from","C. about"],answer:1},
+{chapterID:"Docwise11",questionID:328,chapter:"1.1. NGỮ PHÁP CHUNG",q:"322. Inspect the flanges……see if there are cracks or not.",options:["A. from","B. to","C. of"],answer:1},
+{chapterID:"Docwise11",questionID:329,chapter:"1.1. NGỮ PHÁP CHUNG",q:"323. Don’t re-use this piece............of metal.",options:["A. from","B. to","C. of"],answer:2},
+{chapterID:"Docwise11",questionID:330,chapter:"1.1. NGỮ PHÁP CHUNG",q:"324. The metal is held in place…............flanges.",options:["A. between","B. within","C. about"],answer:0},
+{chapterID:"Docwise11",questionID:331,chapter:"1.1. NGỮ PHÁP CHUNG",q:"325. Do this work…............with the proper cleaner.",options:["A. about","B. with","C. of"],answer:1},
+{chapterID:"Docwise11",questionID:332,chapter:"1.1. NGỮ PHÁP CHUNG",q:"326. The crack may be…............9 inches long, but no more.",options:["A. about","B. with","C. of"],answer:0},
+{chapterID:"Docwise11",questionID:333,chapter:"1.1. NGỮ PHÁP CHUNG",q:"327. Check this part…............make sure that its condition is ok.",options:["A. from","B. on","C. to"],answer:2},
+{chapterID:"Docwise11",questionID:334,chapter:"1.1. NGỮ PHÁP CHUNG",q:"328. There is a shuttle bus from the airport…............the city center.",options:["A. from","B. to","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:335,chapter:"1.1. NGỮ PHÁP CHUNG",q:"329. you start the repair, provide electrical power.",options:["A. from","B. before","C. after"],answer:1},
+{chapterID:"Docwise11",questionID:336,chapter:"1.1. NGỮ PHÁP CHUNG",q:"330. You will find details on the material…............table 1.",options:["A. on","B. before","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:337,chapter:"1.1. NGỮ PHÁP CHUNG",q:"331. An x -ray photo…............of the part will show its exact condition.",options:["A. of","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:338,chapter:"1.1. NGỮ PHÁP CHUNG",q:"332. Fix the part............Sealant BMS 5 -95.",options:["A. without","B. with","C. from"],answer:1},
+{chapterID:"Docwise11",questionID:339,chapter:"1.1. NGỮ PHÁP CHUNG",q:"333. Never do this work............wearing goggles.",options:["A. without","B. with","C. from"],answer:0},
+{chapterID:"Docwise11",questionID:340,chapter:"1.1. NGỮ PHÁP CHUNG",q:"334. Remove all dirt…............the parts.",options:["A. to","B. at","C. from"],answer:2},
+{chapterID:"Docwise11",questionID:341,chapter:"1.1. NGỮ PHÁP CHUNG",q:"335. He comes to work together…............his colleague",options:["A. with","B. on","C. at"],answer:0},
+{chapterID:"Docwise11",questionID:342,chapter:"1.1. NGỮ PHÁP CHUNG",q:"336. There is a poster of an A320 cockpit…............the wall.",options:["A. with","B. on","C. at"],answer:1},
+{chapterID:"Docwise11",questionID:343,chapter:"1.1. NGỮ PHÁP CHUNG",q:"337. Examine the structure............find the dimension of the scratches.",options:["A. at","B. to","C. on"],answer:1},
+{chapterID:"Docwise11",questionID:344,chapter:"1.1. NGỮ PHÁP CHUNG",q:"338. You find the arrival and departure times of the flights…............the timetable.",options:["A. in","B. on","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:345,chapter:"1.1. NGỮ PHÁP CHUNG",q:"339. There are 16 sentences............his page.",options:["A. on","B. in","C. to"],answer:0},
+{chapterID:"Docwise11",questionID:346,chapter:"1.1. NGỮ PHÁP CHUNG",q:"340. A fuel tank…… be free of leakage.",options:["A. have to","B. must","C. has to"],answer:1},
+{chapterID:"Docwise11",questionID:347,chapter:"1.1. NGỮ PHÁP CHUNG",q:"341. Standby altimeters............be operative on all flights.",options:["A. have to","B. must","C. has to"],answer:1},
+{chapterID:"Docwise11",questionID:348,chapter:"1.1. NGỮ PHÁP CHUNG",q:"342. He…............take his car whenever he has night shift.",options:["A. have to","B. must","C. has to"],answer:2},
+{chapterID:"Docwise11",questionID:349,chapter:"1.1. NGỮ PHÁP CHUNG",q:"343. When you check in for a flight, you…............show your Lufthansa identity card.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:350,chapter:"1.1. NGỮ PHÁP CHUNG",q:"344. The passengers............remain seated while the aircraft is taxiing.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:351,chapter:"1.1. NGỮ PHÁP CHUNG",q:"345. You…............check this edge for nicks.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:352,chapter:"1.1. NGỮ PHÁP CHUNG",q:"346. The pilot............switch off the engines before the passengers leave the plane.",options:["A. have to","B. must","C. has to"],answer:1},
+{chapterID:"Docwise11",questionID:353,chapter:"1.1. NGỮ PHÁP CHUNG",q:"346. The mechanics…............calculate the amount of trip fuel before fueling.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:354,chapter:"1.1. NGỮ PHÁP CHUNG",q:"347. For the English course you............be here at eight o’clock.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:355,chapter:"1.1. NGỮ PHÁP CHUNG",q:"348. Our students…............have at least 75 % to pass a test",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:356,chapter:"1.1. NGỮ PHÁP CHUNG",q:"349. Flight crews............be on board before the passengers board the plane.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:357,chapter:"1.1. NGỮ PHÁP CHUNG",q:"350. To fly, you............have a ticket.",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:358,chapter:"1.1. NGỮ PHÁP CHUNG",q:"351. The auto-thrust system…............be operative for Cat III landings.",options:["A. have to","B. must","C. has to"],answer:1},
+{chapterID:"Docwise11",questionID:359,chapter:"1.1. NGỮ PHÁP CHUNG",q:"352. He…............help his colleague to change the shaft of the engine.",options:["A. have to","B. must","C. has to"],answer:2},
+{chapterID:"Docwise11",questionID:360,chapter:"1.1. NGỮ PHÁP CHUNG",q:"353. The flight attendants............move the door lever to PARK",options:["A. have to","B. must","C. has to"],answer:0},
+{chapterID:"Docwise11",questionID:361,chapter:"1.1. NGỮ PHÁP CHUNG",q:"354. Lufthansa Technik............our employer.",options:["A. Is","B. Are","C. The"],answer:0},
+{chapterID:"Docwise11",questionID:362,chapter:"1.1. NGỮ PHÁP CHUNG",q:"355. The teacher............an employee of Lufthansa Technical Training.",options:["A. Are","B. Is","C. Am"],answer:1},
+{chapterID:"Docwise11",questionID:363,chapter:"1.1. NGỮ PHÁP CHUNG",q:"356. Where............you from?",options:["A. Are","B. Is","C. The"],answer:0},
+{chapterID:"Docwise11",questionID:364,chapter:"1.1. NGỮ PHÁP CHUNG",q:"357. I ………. from Germany and my boss............from Germany, too.",options:["A. Am / Are","B. am / Is","C. Is / Are"],answer:1},
+{chapterID:"Docwise11",questionID:365,chapter:"1.1. NGỮ PHÁP CHUNG",q:"358. All my colleagues in this classroom............mechanics.",options:["A. Is","B. Are","C. The"],answer:1},
+{chapterID:"Docwise11",questionID:366,chapter:"1.1. NGỮ PHÁP CHUNG",q:"359. The Boeing 737............an American plane",options:["A. Is","B. Are","C. Am"],answer:0},
+{chapterID:"Docwise11",questionID:367,chapter:"1.1. NGỮ PHÁP CHUNG",q:"360. The two planes in the hangar............the newest ones in the fleet.",options:["A. Is","B. Am","C. Are"],answer:2},
+{chapterID:"Docwise11",questionID:368,chapter:"1.1. NGỮ PHÁP CHUNG",q:"361. Heathrow, Orly and Rhine Main............the biggest airports in Europe",options:["A. Are","B. Is","C. Am"],answer:0},
+{chapterID:"Docwise11",questionID:369,chapter:"1.1. NGỮ PHÁP CHUNG",q:"362. This............an English lesson.",options:["A. Are","B. Is","C. Am"],answer:1},
+{chapterID:"Docwise11",questionID:370,chapter:"1.1. NGỮ PHÁP CHUNG",q:"363. Seeheim ………. a town in Hessen where there............a LH training center.",options:["A. Is / Is","B. Are / Is","C. Is / Are"],answer:0},
+{chapterID:"Docwise11",questionID:371,chapter:"1.1. NGỮ PHÁP CHUNG",q:"364. Ethyl alcohol and other aviation fluids............flammable.",options:["A. Are","B. Is","C. Am"],answer:0},
+{chapterID:"Docwise11",questionID:372,chapter:"1.1. NGỮ PHÁP CHUNG",q:"365. This cleaner ………. not toxic, it............harmless to your skin.",options:["A. Is / Are","B. Are / Is","C. Is / Is"],answer:2},
+{chapterID:"Docwise11",questionID:373,chapter:"1.1. NGỮ PHÁP CHUNG",q:"366. The body of a Fokker 50 is ………. .",options:["A. Very fast","B. Narrow","C. Toxic"],answer:1},
+{chapterID:"Docwise11",questionID:374,chapter:"1.1. NGỮ PHÁP CHUNG",q:"367. A running engine ………. .",options:["A. Are powerful","B. Is powerful","C. Is toxic"],answer:1},
+{chapterID:"Docwise11",questionID:375,chapter:"1.1. NGỮ PHÁP CHUNG",q:"368. A concorde ………. .",options:["A. Are expensive","B. Is very fast","C. Is sticky"],answer:1},
+{chapterID:"Docwise11",questionID:376,chapter:"1.1. NGỮ PHÁP CHUNG",q:"369. This new engine ………. .",options:["A. Is powerful","B. Are flammable","C. Is flame"],answer:0},
+{chapterID:"Docwise11",questionID:377,chapter:"1.1. NGỮ PHÁP CHUNG",q:"370. A ticket around the world ………. .",options:["A. Is dangerous","B. Is expensive","C. Are slow"],answer:1},
+{chapterID:"Docwise11",questionID:378,chapter:"1.1. NGỮ PHÁP CHUNG",q:"371. Ethyl alcohol ………. .",options:["A. Is flammable","B. is expensive","C. Big"],answer:0},
+{chapterID:"Docwise11",questionID:379,chapter:"1.1. NGỮ PHÁP CHUNG",q:"372. A380s are ………. .",options:["A. Very big","B. Sticky","C. mall"],answer:0},
+{chapterID:"Docwise11",questionID:380,chapter:"1.1. NGỮ PHÁP CHUNG",q:"373. Spare parts ………. .",options:["A. Is new","B. Are new","C. New"],answer:1},
+{chapterID:"Docwise11",questionID:381,chapter:"1.1. NGỮ PHÁP CHUNG",q:"374. Engine oil and hydraulic fluid …......",options:["Are toxic","Is noisy","Is new"],answer:0},
+{chapterID:"Docwise11",questionID:382,chapter:"1.1. NGỮ PHÁP CHUNG",q:"375. Old engines are ………. .",options:["A. Is noisy","B. Are sticky","C. Noisy"],answer:2},
+{chapterID:"Docwise11",questionID:383,chapter:"1.1. NGỮ PHÁP CHUNG",q:"376. Adhesives ………. .",options:["A. Are sticky","B. Is noisy","C. Are expensive"],answer:0},
+{chapterID:"Docwise11",questionID:384,chapter:"1.1. NGỮ PHÁP CHUNG",q:"377. Many German cities............airports.",options:["A. Have","B. Has","C. Not both A and B"],answer:0},
+{chapterID:"Docwise11",questionID:385,chapter:"1.1. NGỮ PHÁP CHUNG",q:"378. A Rolls Royce engine............three shafts.",options:["A. Has","B. Have","C. Haven't"],answer:0},
+{chapterID:"Docwise11",questionID:386,chapter:"1.1. NGỮ PHÁP CHUNG",q:"379. New York............three airports.",options:["A. Have","B. Has","C. Not both A and B"],answer:1},
+{chapterID:"Docwise11",questionID:387,chapter:"1.1. NGỮ PHÁP CHUNG",q:"380. I............a ticket to fly to England",options:["A. Has","B. Have","C. Has not"],answer:1},
+{chapterID:"Docwise11",questionID:388,chapter:"1.1. NGỮ PHÁP CHUNG",q:"381. Mechanics............special tools at their places of work.",options:["A. Have","B. Has","C. Is"],answer:0},
+{chapterID:"Docwise11",questionID:389,chapter:"1.1. NGỮ PHÁP CHUNG",q:"382. The B747 -200............a flight engineer",options:["A. Have","B. Has","C. Is"],answer:2},
+{chapterID:"Docwise11",questionID:390,chapter:"1.1. NGỮ PHÁP CHUNG",q:"383. The A319 and the A320............a pilot and a co-pilot, but no flight engineer.",options:["A. Has","B. Have","C. Has not"],answer:1},
+{chapterID:"Docwise11",questionID:391,chapter:"1.1. NGỮ PHÁP CHUNG",q:"384. You............Lufthansa identification cards",options:["A. Have","B. Has","C. Are"],answer:0},
+{chapterID:"Docwise11",questionID:392,chapter:"1.1. NGỮ PHÁP CHUNG",q:"385. Farnkfurt airport............a railway station under the airport.",options:["A. Have","B. Has","C. Be"],answer:1},
+{chapterID:"Docwise11",questionID:393,chapter:"1.1. NGỮ PHÁP CHUNG",q:"386. Maintenance Manuals............instructions and illustrations in them.",options:["A. Has","B. Have","C. Has not"],answer:1},
+{chapterID:"Docwise11",questionID:394,chapter:"1.1. NGỮ PHÁP CHUNG",q:"387. British Airways and Finair............Airbuses in their fleets.",options:["A. Have","B. Has","C. Not both A and B"],answer:0},
+{chapterID:"Docwise11",questionID:395,chapter:"1.1. NGỮ PHÁP CHUNG",q:"388. I............the required qualifications for my job.",options:["A. Has","B. Has not","C. Have"],answer:2},
+{chapterID:"Docwise11",questionID:396,chapter:"1.1. NGỮ PHÁP CHUNG",q:"389. An A340............four engines.",options:["A. Has","B. Have","C. Haven't"],answer:0},
+{chapterID:"Docwise11",questionID:397,chapter:"1.1. NGỮ PHÁP CHUNG",q:"390. One version of the B737............141 seats.",options:["A. Has","B. Have","C. Are"],answer:0},
+{chapterID:"Docwise11",questionID:398,chapter:"1.1. NGỮ PHÁP CHUNG",q:"391. We............different English instructions in our workshop.",options:["A. Has","B. Have","C. Are"],answer:1},
+{chapterID:"Docwise11",questionID:399,chapter:"1.1. NGỮ PHÁP CHUNG",q:"392. Our mechanics............a special airport ID-card which allows them to enter the apron.",options:["A. Has","B. Have","C. Are"],answer:1},
+{chapterID:"Docwise11",questionID:400,chapter:"1.1. NGỮ PHÁP CHUNG",q:"393. Lufthansa and LOT............airlines",options:["A. Are","B. Is","C. Have"],answer:0},
+{chapterID:"Docwise11",questionID:401,chapter:"1.1. NGỮ PHÁP CHUNG",q:"394. Lufthansa............training centers for technical apprentices in Hamburg, Frankfurt and Munich",options:["A. Has","B. Are","C. Have"],answer:0},
+{chapterID:"Docwise11",questionID:402,chapter:"1.1. NGỮ PHÁP CHUNG",q:"395. There............many big international airports in Europe",options:["A. Is","B. Are","C. Has"],answer:1},
+{chapterID:"Docwise11",questionID:403,chapter:"1.1. NGỮ PHÁP CHUNG",q:"396. The MD11 freighter............three CF6 -80C2 engines.",options:["A. Has","B. Have","C. Are"],answer:0},
+{chapterID:"Docwise11",questionID:404,chapter:"1.1. NGỮ PHÁP CHUNG",q:"397. The 737 -500 ………. a Boeing plane. It............two engines under the wings.",options:["A. Is / Are","B. Is / Has","C. Are / Have"],answer:1},
+{chapterID:"Docwise11",questionID:405,chapter:"1.1. NGỮ PHÁP CHUNG",q:"398. DC10s ………. three engines, two ………. under the wings and one............in the tail fin.",options:["A. Has / is / is","B. Have / are / is","C. Has / is / are"],answer:1},
+{chapterID:"Docwise11",questionID:406,chapter:"1.1. NGỮ PHÁP CHUNG",q:"399. All airlines............flight crews and ground staff.",options:["A. Have","B. Has","C. Are"],answer:0},
+{chapterID:"Docwise11",questionID:407,chapter:"1.1. NGỮ PHÁP CHUNG",q:"400. The crane............Lufthansa’s company symbol",options:["A. Have","B. Has","C. Is"],answer:2},
+
+
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+let wrongQuestions = {}; /* 08/08/26 */
+let reviewWrongMode = false; /* 01/08/26 */
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer) {
+        label.classList.add("wrong");
+        // wrongQuestions.add(q.originalIndex); /* 01/08/26 */
+        if (!wrongQuestions[q.chapterID]) {
+            wrongQuestions[q.chapterID] = new Set();
+        }
+
+        wrongQuestions[q.chapterID].add(q.questionID);
+      }
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  let correct_percentage = ((score / questions.length) * 100).toFixed(2);
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length} (${correct_percentage}%)`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer) {
+      label.classList.add("wrong");
+      if (!wrongQuestions[q.chapterID]) {
+          wrongQuestions[q.chapterID] = new Set();
+      }
+
+      wrongQuestions[q.chapterID].add(q.questionID); /* 08/08/26 */
+    }
+  });
+
+  
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let count = parseInt(document.getElementById("questionCount").value);
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  // Get chapter pool
+  let pool = originalQuestions
+      .filter(q => q.chapter === selectedChapter)
+      .map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */ // ver2 //
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  // Clamp range
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  // Apply range (convert to 0-based index)
+  pool = pool.slice(start - 1, end);
+
+  // Fix count
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  // Deep copy
+  // pool = JSON.parse(JSON.stringify(pool)); // ver 1 //
+  
+  pool = pool.map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */
+
+  // Shuffle questions if enabled
+  if (shuffleEnabled) shuffleArray(pool);
+
+  // Pick N
+  questions = pool.slice(0, count);
+
+  // Shuffle answers if enabled
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  const rangeSize = end - start + 1;
+
+  document.getElementById("questionCount").value = rangeSize;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+
+  // Reset range to full chapter
+  document.getElementById("rangeStart").value = 1;
+  document.getElementById("rangeEnd").value = size;
+}
+
+/* Wrong Quesions Storing and Recalling*/
+function updateWrongQuestionList(){
+
+    const list =
+        document.getElementById("wrongList");
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        list.innerHTML="None";
+        return;
+    }
+
+
+    list.innerHTML =
+        [...wrongQuestions[chapterID]]
+        .sort((a,b)=>a-b)
+        .join(", ");
+
+}
+
+function reviewWrongQuestions(){
+
+    const shuffleEnabled =
+        document.getElementById("shuffleToggle").checked;
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+    
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+    
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        alert("No wrong questions in this chapter.");
+        return;
+    }
+
+
+    // Get only wrong questions
+    let pool =
+        originalQuestions
+        .filter(q =>
+            q.chapterID === chapterID &&
+            wrongQuestions[chapterID]
+            .has(q.questionID)
+        )
+        .map(q =>
+            JSON.parse(JSON.stringify(q))
+        );
+
+
+    // Shuffle question order
+    if (shuffleEnabled) {
+        shuffleArray(pool);
+    }
+
+
+    // Shuffle answers
+    if (shuffleEnabled) {
+        pool.forEach(shuffleOptions);
+    }
+
+
+    questions = pool;
+    // document.getElementById("questionCount").value = questions.length;
+
+    renderQuiz();
+
+}
+
+function clearWrongQuestions(){
+
+    wrongQuestions.clear();
+
+    updateWrongQuestionList();
+
+}
+
+function chapterChanged(){
+
+    updateChapterSize();
+
+    updateWrongQuestionList();
+
+}
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+
+originalQuestions.forEach((q, i) => {
+    q.originalIndex = i;
+});
+
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
