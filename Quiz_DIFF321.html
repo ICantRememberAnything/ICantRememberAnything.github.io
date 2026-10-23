@@ -1,0 +1,823 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz ATHK</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  padding: 16px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.question {
+  margin-bottom: 24px;
+}
+
+.question p {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* OPTION BLOCK */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Bigger radio */
+.option input[type="radio"] {
+  transform: scale(1.4);
+}
+
+/* Feedback colors */
+.correct {
+  background-color: #d6f5d6;
+  border-color: #3aa63a;
+  /* color: green; */
+  font-weight: bold;
+  border: 2px solid #2e7d32;
+}
+
+.wrong {
+  background-color: #f8d7da;
+  border-color: #d9534f;
+  /* color: red; */
+  font-weight: bold;
+  border: 2px dashed #c62828;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark .option {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+
+body.dark .correct {
+  background-color: #234d23;
+  border-color: #4caf50;
+}
+
+body.dark .wrong {
+  background-color: #5a1e1e;
+  border-color: #f44336;
+}
+
+body.dark button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #666;
+}
+
+/* Control Buttons */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 1rem;
+}
+
+.controls input[type="number"] {
+  width: 80px;
+  font-size: 1rem;
+  padding: 6px;
+}
+
+/* Keep bottom buttons visually separated */
+.bottom-controls {
+  margin-top: 30px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+/* Buttons */
+.controls button {
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+/* Jump-to-top button */
+#topBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: 50%;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 12px 16px;
+  margin: 12px 10px 12px 0;
+  border-radius: 8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Quiz ATHK</h2>
+<h3>Tự check lại đáp án nhé</h3>
+
+<div class="controls top-controls">
+  <label>
+    Chapter:
+    <select id="chapterSelect" onchange="chapterChanged()"></select>
+    <span id="chapterSize"></span>
+  </label>
+
+  <label>
+    From:
+    <input type="number" id="rangeStart" value="1" min="1">
+  </label>
+
+  <label>
+    To:
+    <input type="number" id="rangeEnd" value="50" min="1">
+  </label>
+
+  <label>
+    Number of questions:
+    <input type="number" id="questionCount" value="20" min="1">
+  </label>
+
+  <button onclick="selectAllInChapter()">All in range</button>
+
+  <label>
+    <input type="checkbox" id="shuffleToggle" checked>
+    Shuffle questions & answers
+  </label>
+
+  <label>
+    <input type="checkbox" id="instantToggle">
+    Instant feedback
+  </label>
+
+  <label>
+    <input type="checkbox" id="darkToggle">
+    Dark mode
+  </label>
+
+  <button onclick="resetQuiz()">Reset Quiz</button>
+
+  
+  <button onclick="reviewWrongQuestions()">
+  Wrong questions only
+  </button>
+
+</div>
+
+<div id="quiz"></div>
+
+<div id="wrongPanel">
+
+<b>Wrong questions:</b>
+
+<span id="wrongList">
+None
+</span>
+
+<br><br>
+
+<button onclick="reviewWrongQuestions()">
+Wrong questions only
+</button>
+
+<button onclick="clearWrongQuestions()">
+Clear history
+</button>
+
+</div>
+
+<hr>
+
+<button onclick="submitQuiz()">Submit</button>
+<button onclick="resetQuiz()">Reset Quiz</button>
+<button id="topBtn" onclick="scrollToTop()">⬆ Top</button>
+
+<p id="score"></p>
+
+<script>
+/* =========================
+   EDIT QUESTIONS HERE
+   ========================= */
+
+const originalQuestions = [
+{chapterID:"ATA_26_NEO",questionID:1,chapter:"ATA 26 NEO",q:"1. Detector sensor elements on engine are secured to support tube by: (level 2)",options:["Fasteners and clamps","Clamps and Teflon liners","Safety wires, clamps and Teflon liners"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:2,chapter:"ATA 26 NEO",q:"2. A fire/overheat detector assembly consists of:",options:["A support tube, a bracket and 04 fire/overheat detectors","A support tubes, 04 brackets and a fire/overheat detector","A support tube, 04 brakets and 04 fire/overheat detectors"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:3,chapter:"ATA 26 NEO",q:"3. The detector will issue a overheat signal due to:",options:["Generally increasing pressure by helium gas","Generally increasing pressure by hydrogen gas","Quickly increasing pressure by hydrogen gas"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:4,chapter:"ATA 26 NEO",q:"4. The Integrity switch of Engine fire/overheat detector issues a signal to the flight deck if:",options:["Faulty on detector occurring.","Overheat or fire condition","Overheat or fire condition or faulty on detector."],answer:0},
+{chapterID:"ATA_26_NEO",questionID:5,chapter:"ATA 26 NEO",q:"5. When fire or overheat condition disappears, the alam switch will:",options:["Stay close postion","Back to open position by reset CB of FDU","Back to open position automatically"],answer:2},
+{chapterID:"ATA_26_NEO",questionID:6,chapter:"ATA 26 NEO",q:"6. A fire/overheat detector operates depend on:",options:["Resistance of element","Internal gas pressure","Voltage of detecting circuit"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:7,chapter:"ATA 26 NEO",q:"7. The fire detection loops on PW1100G engines are",options:["Dual loops","Singe loops","Single loops on pylon area, the other areas are dual loops"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:8,chapter:"ATA 26 NEO",q:"8. The support tube establishes:",options:["The position of the sensor element and provide the attachment point to the engine","The position of the sensor element","the attachment point to the engine"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:9,chapter:"ATA 26 NEO",q:"9. In case of fire:",options:["Causing the fast release of a large amount of gas from the special core material. This gas release very quickly increases the internal pressure to a set value, makes the pressure-sensitive alarm switch inside the responder closes","Causing the fast release of a large amount of gas from the special core material. This gas release very quickly decrease the internal pressure to a set value, makes the pressure-sensitive alarm switch inside the responder closes","Causing the fast release of a large amount of gas from the special core material. This gas release very quickly increases the internal pressure to a set value, makes the pressure-sensitive alarm switch inside the responder open"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:10,chapter:"ATA 26 NEO",q:"10. What does the Engine fire/overheat detector assembly have?",options:["An alarm switch","An integrity switch","An alarm switch that reacts to temperature and pressure, and an integrity switch that responds to pressure"],answer:2},
+{chapterID:"ATA_26_NEO",questionID:11,chapter:"ATA 26 NEO",q:"11. Fire detectors on PW1100G engine are located at:",options:["Pylon area, fan area, core area","Pylon area, AGB area, core area","Fan area, AGB area, core area"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:12,chapter:"ATA 26 NEO",q:"12. The engine fire protection is fulfilled by:",options:["The FIRE detection system only","The FIRE detection system and the FIRE extinguishing system","The FIRE extinguishing system only"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:13,chapter:"ATA 26 NEO",q:"13. How is the Alarm switch of Engine fire/overheat detector operate?",options:["Operating on the principle that pressure decrease with a rise in temperature. If ambient temperature around the sensor element increase, or a short section of the sensor element is exposed to intense heat, internal pressure in the sensor element and the responder housing will decrease","Operating on the principle that pressure increase with a rise in temperature. If ambient temperature around the sensor element increase, or a short section of the sensor element is exposed to intense heat, internal pressure in the sensor element and the responder housing will increase in proportion","Operating on the principle that pressure increase with a rise in temperature. If ambient temperature around the sensor element increase, or a short section of the sensor element is exposed to intense heat, internal pressure in the sensor element and the responder housing will decrease"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:14,chapter:"ATA 26 NEO",q:"14. The responder of engine fire loop has:",options:["An ALARM switch and a FIRE switch.","An MONITOR switch and a INTEGRITY switch.","An ALARM switch and an INTEGRITY switch."],answer:2},
+{chapterID:"ATA_26_NEO",questionID:15,chapter:"ATA 26 NEO",q:"15. How many fire/overheat detectors does the Engine fire/overheat detection system comprise of?",options:["2","3","6"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:16,chapter:"ATA 26 NEO",q:"16. Where are the Engine fire components located?",options:["On the Fan and the Turbine and Pylon","On the left and right side of engine core, along the main gearbox and low pressure turbine","On the left and right side of engine core, along the main gearbox"],answer:1},
+{chapterID:"ATA_26_NEO",questionID:17,chapter:"ATA 26 NEO",q:"17. How the Integrity switch in the responder housing is kept closed position?",options:["By normal gas pressure in the sensor element","By airflow pressure from LPC","By electrical relay"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:18,chapter:"ATA 26 NEO",q:"18. In case of the gas leakage:",options:["The subsequent pressure increase, will cause the integrity switch to close, signaling a fault malfunction to the flight deck","The subsequent pressure decrease, will cause the integrity switch to close, signaling a fault malfunction to the flight deck","The subsequent pressure decrease, will cause the integrity switch to open, signaling a fault malfunction to the flight deck"],answer:2},
+{chapterID:"ATA_26_NEO",questionID:19,chapter:"ATA 26 NEO",q:"19. The fire detectors of each fire detection loop onPW1100G engine are",options:["Parallel connected","Serial connected","Not connected together"],answer:0},
+{chapterID:"ATA_26_NEO",questionID:20,chapter:"ATA 26 NEO",q:"20. The fire detection system warms the flight crew",options:["Fire condition","Overheat condition","Fire or overheat conditions"],answer:2},
+
+{chapterID:"ATA_30_NEO",questionID:1,chapter:"ATA 30 NEO",q:"1. The nacelle anti-ice valves are",options:["Electrical controlled & pneumatically operated","Electrical controlled & operated","Pneumatically controlled and operated"],answer:0},
+{chapterID:"ATA_30_NEO",questionID:2,chapter:"ATA 30 NEO",q:"2. To dispatch aircraft under failure of two engine anti-ice valves?",options:["Deactivate the valves in open position through the manual override mechanism","Deactivate the valves in closed position through the manual override mechanism","No dispatch allowed"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:3,chapter:"ATA 30 NEO",q:"3. How many Fan compartment thermocouples are there in the system?",options:["One type K thermocouples, one for both EEC channel. To provide the EEC with temperature measurement in the fan compartment","Two type K thermocouples, one for each EEC channel. To provide the EEC with temperature measurement in the fan compartment","Two type K thermocouples, one for each EEC channel. To provide the EEC with temperature and pressure measurement in the fan compartment"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:4,chapter:"ATA 30 NEO",q:"4. Hot air for the Nacelle anti-ice system is supplied by a dedicated HP Compressor (HPC) bleed:",options:["on the PWl000G, 7th stage.","on the PWl000G, 6th stage.","on the PWl000G, 8th stage."],answer:1},
+{chapterID:"ATA_30_NEO",questionID:5,chapter:"ATA 30 NEO",q:"5. What is true regarding 2 NAI PRSOVs?",options:["When the NAI solenoids de-energized, the HPC 6th stage air is supplied to inlet cowl.","When the NAI solenoids energized, the HPC 6th stage air is supplied to inlet cowl.","At least one NAI solenoid de-energized, the HPC 6th stage air is supplied to inlet cowl."],answer:0},
+{chapterID:"ATA_30_NEO",questionID:6,chapter:"ATA 30 NEO",q:"6. Where is Nacelle anti-ice pressure transducers located?",options:["The downstream pressure transducer is located downstream of the two NAI PRSOVs, as the primary role is to monitor NAI PRSOVs position","The upstream pressure transducer is located between of the two NAI PRSOVs, as the secondary role is to figure out which NAI PRSOVs fail","The downstream pressure transducer is located downstream of the two NAI PRSOVs, as the primary role is to monitor NAI PRSOVs position. The upstream pressure transducer is located between of the two NAI PRSOVs, as the secondary role is to figure out which NAI PRSOVs fail"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:7,chapter:"ATA 30 NEO",q:"7. What are the Nacelle anti-ice pressure regulating shutoff valves (NAI PRSOVs) for?",options:["Upper and lower NAI PRSOVs operate in tandem to control pressure and airflow of LPC 3th stage air used for inlet anti-ice","Upper and lower NAI PRSOVs operate in tandem to control pressure and airflow of HPC 6th stage air used for inlet anti-ice","Upper and lower NAI PRSOVs operate in tandem to control pressure and airflow of HPC 9th stage air used for inlet anti-ice"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:8,chapter:"ATA 30 NEO",q:"8. How is the Engine anti-ice work?",options:["Electrically controlled and operated by 3th stage high pressure compressor air","Electrically controlled and operated by 6th stage high pressure compressor air","Electrically controlled and operated by 9th stage high pressure compressor air"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:9,chapter:"ATA 30 NEO",q:"9. On PW1100G engine the ENG ANTI-ICE P/B switches on overhead panel",options:["Control the engine anti-ice valves directly","Send signal to EEC, then the EEC controls the engine anti-ice valves","Send signal to EIU, then the EIU controls the engine anti-ice valves"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:10,chapter:"ATA 30 NEO",q:"10. Each of Nacelle Anti-Ice Pressure Regulating Shutoff Valves (NAI PRSOV) can be deactivated in _______ position according to MEL:",options:["closed","open","either open or closed"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:11,chapter:"ATA 30 NEO",q:"11. Hot air for nacelle anti-ice system on PW1100G engineis supplied from",options:["A/C bleed air system","Dedicated bleed air from LPC stage 3","Dedicated bleed air from HPC stage 6"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:12,chapter:"ATA 30 NEO",q:"12. Where is Swirl nozzle attached?",options:["Attached to the rear of the inlet cowl at 5:00","Attached to upper of inlet cowl at 1:00","Attached to the rear of the inlet cowl at 7:00"],answer:0},
+{chapterID:"ATA_30_NEO",questionID:13,chapter:"ATA 30 NEO",q:"13. Regard to PW1100G engine anti-ice system, A/C can be dispatched with",options:["Two PRSOVs deactivated in OPEN position","One PRSOV deactivated in CLOSED position","One PRSOV deactivated in OPEN position"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:14,chapter:"ATA 30 NEO",q:"14. Which statement below is correct?",options:["Upper and lower NAI PRSOVs are not interchangeable","Upper and lower NAI PRSOVs are interchangeable","Upper and lower NAI PRSOVs are interchangeable with certain condition."],answer:0},
+{chapterID:"ATA_30_NEO",questionID:15,chapter:"ATA 30 NEO",q:"15. On PW1100G engine anti-ice system, to deactivate an anti-ice PRSOV",options:["You must open the fan cowls","You must open the thrust reverser cowls","You can deactivate the PRSOV with the fan cowls and reverser cowls closed"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:16,chapter:"ATA 30 NEO",q:"16. On PW1100G engine, nacelle anti-ice duct leak or burst is monitored by",options:["A leak detector located in the core zone","01 PT (Pressure Transducer)in the core zone, 01 PT in the fan zone and 01 dual temperature sensor in the fan zone","A leak detector located in the fan zone"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:17,chapter:"ATA 30 NEO",q:"17. Nacelle anti-ice ducts is segment into:",options:["Two sections","Three sections","Four sections"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:18,chapter:"ATA 30 NEO",q:"18. In case of leakage or burst of NAI (Nacelle Anti Ice) duct in Fan compartment:",options:["EEC will recognize by Thermocouples.","EEC will recognize by Pressure Transducers.","EEC will recognize by 1 Pressure Transducer."],answer:0},
+{chapterID:"ATA_30_NEO",questionID:19,chapter:"ATA 30 NEO",q:"19. On PW1100G engine anti-ice system, there is (are)",options:["01 PRSOV (Pressure Regulating an Shut Off Valve)","01 SOV (Shut Off valve) and 01 PRV (Pressure Regulating Valve)","02 PRSOVs (Pressure Regulating an Shut Off Valve)"],answer:2},
+{chapterID:"ATA_30_NEO",questionID:20,chapter:"ATA 30 NEO",q:"20. How can you operate the Nacelle anti-ice system?",options:["By ENG ANTI-ICE push button, on ground","By ENG ANTI-ICE push button, on ground and in flight","By ENG ANTI-ICE push button, in flight only"],answer:1},
+{chapterID:"ATA_30_NEO",questionID:21,chapter:"ATA 30 NEO",q:"21. What are the Nacelle anti-ice remote solenoids and manifold for?",options:["To control the opening and closing of the NAI upper and lower PRSOVs","To control the opening of the NAI upper and lower PRSOVs","To control the closing of the NAI upper and lower PRSOVs"],answer:0},
+
+{chapterID:"ATA_36_NEO",questionID:1,chapter:"ATA 36 NEO",q:"1. Pressure relief door is located at: ( level 1):",options:["Leading edge of fuselarge fairing, pylon and core compartment.","Leading edge of fuselarge fairing, pylon and fan compartment.","Fan compartment, pylon and core compartment."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:2,chapter:"ATA 36 NEO",q:"2. IP Check Valve is controlled closed by: ( level 1):",options:["High pressure bleed air come from HPV.","BMCs closed signals.","Both of them"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:3,chapter:"ATA 36 NEO",q:"3. How many pressure relief panels are there on each wing: ( level 1):",options:["5 panels","4 panels","3 panels"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:4,chapter:"ATA 36 NEO",q:"4. About BMC internal archiquecture, which statement is correct: ( level 1):",options:["Channel A and channel B are full digital channel.","Channel A is a full hardware part and channel B is a full digital channel.","Channel B is a full hardware part and channel A is a full digital channel."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:5,chapter:"ATA 36 NEO",q:"5. IAW MMEL, the aircraft can be dispatched with the High Pressure Valve (HPV) is deactivated in the following position: (Level 2)",options:["Open.","Close.","Either Open or close"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:6,chapter:"ATA 36 NEO",q:"6. What is the sensor which sends signal to channel B of BMC directly: ( level 2)",options:["Temperature sensor","Different pressure sensor (18HA)","Bleed Pressure Sensor 8HA (BPS)"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:7,chapter:"ATA 36 NEO",q:"7. Channel B of each BMCs is used to: ( level 2",options:["Detect the system overtemperature.","Detect the system overpressure.","Detect the system overtemperature and overpressure."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:8,chapter:"ATA 36 NEO",q:"8. BMC 2 is uploaded data via: ( level 3)",options:["Data Loading Routing Box ( DLRB) directly.","BMC1 cross load only.","Both of them."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:9,chapter:"ATA 36 NEO",q:"9. System pressure monitoring by BMC base on: (Level 3)",options:["BPS: BLEED PRESSURE SENSOR.","BTS: BLEED TEMPERATURE SENSOR.","DPS: DIFFERENTIAL PRESSURE SENSOR."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:10,chapter:"ATA 36 NEO",q:"10. The signal which makes the Over pressure valve (OPV) closing, comes from: (level1)",options:["Bleed pressure sensor (8HA).","Differential pressure sensor (18HA)","OPV operation in fully pneumatic."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:11,chapter:"ATA 36 NEO",q:"11. What type of seals is most used on bleed duct system that is advantages of A320/321 NEO? ( level 1):",options:["Using new silicon seals","Using PTFE seals","Using new rubber seals"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:12,chapter:"ATA 36 NEO",q:"12. In case of motor actuator failure, the cross bleed valve will: ( level 1):",options:["Stucked in last position.","Fail safe to close position.","Fail safe to open position."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:13,chapter:"ATA 36 NEO",q:"13. How about two motor actuator of Cross Bleed Valve: ( level 2)",options:["One operate in active and other in standby mode.","One operate in manual and other in automatic mode independently.","Motor 1 controlled by BMC1 and motor 2 control by BMC2."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:14,chapter:"ATA 36 NEO",q:"14. In abnormal condition, the temperatue of bleed air reachs to 450 deg.C, PRV will be closed by : ( level 3)",options:["The thermal fuse installed in the valve body.","Temperature sensor located at downstream of precooler exchanger.","The thermal switch installed in the solenoid torque motor."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:15,chapter:"ATA 36 NEO",q:"15. The APU can supply bleed air (Level 1)",options:["From ground to 20.000ft","From ground to 16.000ft","All times"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:16,chapter:"ATA 36 NEO",q:"16. How is PRV controlled in closed position manually by? ( level 1):",options:["ENGINE FIRE pushbutton switch or ENGINE BLEED pushbutton switch.","ENGINE FIRE pushbutton switch APU BLEED pushbutton switch.","ENGINE BLEED pushbutton switch or APU BLEED pushbutton switch."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:17,chapter:"ATA 36 NEO",q:"17. The PRV operate as (Level 2)",options:["Shut off and regulating","Shut off valve","Regulating valve"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:18,chapter:"ATA 36 NEO",q:"18. Regarding to BMC 1 power supply: ( level 3)",options:["Channel A by 28 VDC normal busbar and channel B by 28VDC Ess bus.","Channel B by 28 VDC normal busbar and channel A by 28VDC Ess bus.","Both channel A&B by 28 VDC Ess bus."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:19,chapter:"ATA 36 NEO",q:"19. Air Conditioning System Controllers (ACSC) input the BMCs signals of: ( level 3)",options:["Pack P/B switch position, Pack inlet pressure and Wing anti-ice valves position.","Pack P/B switch position, Pack inlet temperature and Wing anti-ice valves position","Pack P/B switch position, Pack inlet pressure and Cabin temperature."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:20,chapter:"ATA 36 NEO",q:"20. Regarding to BMC 2 power supply: ( level 3)",options:["Channel A by 28 VDC normal busbar and channel B by 28VDC Ess bus.","Channel B by 28 VDC normal busbar and channel A by 28VDC Ess bus.","Both channel A&B by 28 VDC Ess bus."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:21,chapter:"ATA 36 NEO",q:"21. Cooling air for precooler heatexchanger comes from: ( level 1):",options:["Ram air through ram air port.","Fan air of the engine","Bleed air of LPC stage 3"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:22,chapter:"ATA 36 NEO",q:"22. Bleed Pressure Sensor 8HA (BPS) is used to: ( level 2)",options:["Estimate postion of HPV and monitor PRV postion.","Monitor and close loop control of OPV","Regulation control and monitor low or high pressure warning."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:23,chapter:"ATA 36 NEO",q:"23. Overheat sensor elements give warning message when: ( level 3)",options:["Wing or pylon temperature reachs 124 deg.C","Wing or fuselarge temperature reachs 124 deg.C","Pylon or wing or fuselarge temperature reachs 124 deg.C"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:24,chapter:"ATA 36 NEO",q:"24. BMC was finding about reverser flow by: (Level 3)",options:["DPS: DIFFERENTIAL PRESSURE SENSOR.","BMPS: BLEED MONITORINC PRESSURE SENSOR.","BPS: BLEED PRESSURE SENSOR."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:25,chapter:"ATA 36 NEO",q:"25. Bleed Manifold Pressure Sensor 7HA (BMPS) is used to: ( level 2)",options:["Estimate postion of HPV and monitor PRV postion.","Monitor and close loop control of OPV","Regulation control and monitor low or high pressure warning."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:26,chapter:"ATA 36 NEO",q:"26. What is the signal which the BMCs inform the ACSCs for pack flow calculation: ( level 3)",options:["Precooler outlet temperature.","Precooler outlet pressure.","Precooler outlet temperature and pressure."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:27,chapter:"ATA 36 NEO",q:"27. What is the purpose of IP/HP switching? (Level 1)",options:["To regulate the output pressure depending on the Fan Air Valve position.","To keep sufficient bleed pressure at low engine speed.","To regulate the output temperature depending on the configuration of users."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:28,chapter:"ATA 36 NEO",q:"28. Each BMC can control the PRV, the HPV and the (Level 1)",options:["Over Pressure Valve (OPV).","Intermediate Pressure Check Valve (IPCV).","Fan Air Valve (FAV)."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:29,chapter:"ATA 36 NEO",q:"29. The cross bleed valve is: (Level 1)",options:["Controlled and operated electrically by 1 motors","Controlled and operated electrically by 2 motors","Controlled electrically, and operated pneumatically"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:30,chapter:"ATA 36 NEO",q:"30. Regarding pressure relief panels are there on each wing: ( level 2)",options:["There are 3 panels located inboard of engine pylon and 2 outboard of engine pylon.","There are 5 panels located at inboard of engine pylon.","There are 5 panels located at outboard of engine pylon."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:31,chapter:"ATA 36 NEO",q:"31. For PW 1130 Engine, HPV is: (Level 2)",options:["Electric control and Bleed Pressure open","Bleed Pressure control and open","Electric control and open"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:32,chapter:"ATA 36 NEO",q:"32. BMC has: (Level 2)",options:["01 Channel.","02 Channels A and B which the same function.","Channel A Main control, Channel A Backup control, Chanel B."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:33,chapter:"ATA 36 NEO",q:"33. In NEO configure 1 BMC can control and monitor: (Level 2)",options:["1 side that relation to.","The both sides in sequent.","The both sides when the other BMC fails."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:34,chapter:"ATA 36 NEO",q:"34. HP Valve connect to: (Level 3)",options:["HPC Stage HP4.","LPC Stage LP2.","HPC Stage HP8."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:35,chapter:"ATA 36 NEO",q:"35. IP Check Valve connect to: (Level 3)",options:["HPC Stage HP3.","HPC Stage HP6.","LPC Stage LP2."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:36,chapter:"ATA 36 NEO",q:"36. How is the position of valves of engine PW1100G bleed system monitored? (Level 3)",options:["By micro switches","By pressure transducers","By control signal from BMCs"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:37,chapter:"ATA 36 NEO",q:"37. Which area has the single detection loop? (Level 1)",options:["APU aft supply duct","Pylon","Wing"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:38,chapter:"ATA 36 NEO",q:"38. Hot air for nacelle anti-ice system on PW1100G engines supplied from (Level 2)",options:["A/C bleed air system","Dedicated bleed air from LPC stage 3","Dedicated bleed air from HPC stage 6"],answer:2},
+{chapterID:"ATA_36_NEO",questionID:39,chapter:"ATA 36 NEO",q:"39. PRV is closed when: (Level 2)",options:["HPV failed open.","Dual BTS channels failed.","Either Associated Starer Air Valve (SAV) not Closed, HPV failed open or Dual BTS channels failed."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:40,chapter:"ATA 36 NEO",q:"40. How does FAV (Fan Air Valve) operate? (Level 2)",options:["BMC controlled by torque motor based on bleed air temperature","Autonomously pneumatic operative based on the controlled temperature thermostat","BMC controlled based on the precooler outlet temperature thermostat"],answer:0},
+{chapterID:"ATA_36_NEO",questionID:41,chapter:"ATA 36 NEO",q:"41. Customer bleed for engine PW1100G are: (Level 3)",options:["4th and 9th stage of HPC","5th and 10th stage of HPC","3th and 8th stage of HPC"],answer:2},
+{chapterID:"ATA_36_NEO",questionID:42,chapter:"ATA 36 NEO",q:"42. BMC used Temperature to position FAV from: (Level 3)",options:["BMPS: BLEED MONITORINC PRESSURE SENSOR.","BTS: BLEED TEMPERATURE SENSOR.","BPS: BLEED PRESSURE SENSOR."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:43,chapter:"ATA 36 NEO",q:"43. How are the position of valves of engine PW1100G bleed system monitored? (Level 1)",options:["By micro switches","By pressure transducers","By control signal from BMCs"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:44,chapter:"ATA 36 NEO",q:"44. Which statement below is true? (Level 2)",options:["The BMC controls the HPV and PRV in independent mode.","The BMC controls the HPV and PRV in order to make sure that the HPV will close when PRV is controlled closed.","The HPV and PRV are pneumatically operated and their operation is independent from each other."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:45,chapter:"ATA 36 NEO",q:"45. Which Pneumatic leak detection is NOT double loop: (Level 2)",options:["Wing loop.","Pylon loop.","APU loop."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:46,chapter:"ATA 36 NEO",q:"46. The conditioned bleed air supplied by engine PW1100G bleed system is: (Level 2)",options:["150 deg.C, 44 PSI","200 deg.C, 51 PSI","250 deg.C, 75 PSI"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:47,chapter:"ATA 36 NEO",q:"47. The aircraft systems are supplied the HP compressor air from (Level 1)",options:["Stage 3 and stage 8.","Stage 3 and stage 7.","Stage 3 and stage 6."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:48,chapter:"ATA 36 NEO",q:"48. When APU bleed P/B is selected ON with Cross Bleed Valve rotary selector in AUTO position, lower ECAM BLEED page indicates: (Level 2)",options:["APU bleed valve open then the cross bleed valve open.","APU bleed valve open but the cross bleed valve not open.","Cross bleed valve open then APU bleed valve open."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:49,chapter:"ATA 36 NEO",q:"49. What is the Differential pressure sensor (DPS) for? (Level 3)",options:["BMC uses the signal of DPS to control IP/HP switching","DPS monitors the pressure, control the OPV position","DPS monitors the pressure, control the PRV position and make sure that no reverse flow occurs"],answer:2},
+{chapterID:"ATA_36_NEO",questionID:50,chapter:"ATA 36 NEO",q:"50. Bleed monitoring control (BMC) embedding: (Level 3)",options:["Digital control channel is a full digital channel embedding all the control and monitoring function to meet system requirements","Hardware safety part is a fully hardware part able to detect the system over-temperature","Two channels: Digital control channel (CHA) is a full digital channel embedding all the control and monitoring function to meet system requirements; Hardware safety part (CHB) is a fully hardware part able to detect the system over-temperature and is fully independent from software part"],answer:2},
+{chapterID:"ATA_36_NEO",questionID:51,chapter:"ATA 36 NEO",q:"51. What is the design principle of the bleed leak detection loop? (Level 1)",options:["Resistance.","Pressure.","Capacitor."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:52,chapter:"ATA 36 NEO",q:"52. What type of loop detection element at pylon aircraft A320/321 NEO is ( level 1):",options:["Single loop.","Dual loop.","No loop at pylon."],answer:1},
+{chapterID:"ATA_36_NEO",questionID:53,chapter:"ATA 36 NEO",q:"53. The function of Differential Pressure Sensor 18HA (DPS) is: ( level 2)",options:["Monitor the pressure, control PRV position in case of reverser flow.","Provide position of OPV and PRV.","Both answer are correct."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:54,chapter:"ATA 36 NEO",q:"54. Power sypply of X-BLEED valve comes from: ( level 1):",options:["BMC1","BMC2","Neither BMC1 nor BMC2."],answer:2},
+{chapterID:"ATA_36_NEO",questionID:55,chapter:"ATA 36 NEO",q:"55. Regarding to BMC 2 control in case of BMC 1 failure: ( level 2",options:["Fully control and monitor engine 1 bleed system.","Engine 1 bleed system will be in safety close.","Engine 1 bleed system will operate in low pressure mode."],answer:0},
+{chapterID:"ATA_36_NEO",questionID:56,chapter:"ATA 36 NEO",q:"56. How can you operate the Nacelle anti-ice system? (Level 3)",options:["By ENG ANTI-ICE push button, on ground","By ENG ANTI-ICE push button, on ground and in flight","By ENG ANTI-ICE push button, in flight only"],answer:1},
+{chapterID:"ATA_36_NEO",questionID:57,chapter:"ATA 36 NEO",q:"57. On NEO aircrafts, to detect the hot air leakage in pylon there is(are): (Level 2)",options:["Single loop that connected to the related BMC.","2 loops and monitored by both BMCs.","2 loops that connected to the related BMC for redundancy."],answer:1},
+
+{chapterID:"ATA_70_NEO",questionID:1,chapter:"ATA 70-80 NEO",q:"1. What are(is) kind of different pressure fuel filter clog indication(s) available(Level 1)",options:["A. Degrad","B. Clog °rad","C. Clog"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:2,chapter:"ATA 70-80 NEO",q:"2. Data Storage Unit connect to: (Level 3)",options:["A. EEC Chanel A.","B. EEC Chanel B.","C. PHMU."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:3,chapter:"ATA 70-80 NEO",q:"3. How does EEC monitor the position of HPC bleed valves? (Level 3)",options:["A. By thermocouple sensors","B. By pressure sensors","C. There is no position feedback to EEC"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:4,chapter:"ATA 70-80 NEO",q:"4. The aft mount: (Level 2)",options:["A. Carries the engine torque, thrust and side loads.","B. Carries the engine torque, vertical and side loads.","C. Carries the engine thrust, vertical and side loads."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:5,chapter:"ATA 70-80 NEO",q:"5. How do the EEC’s both channels operate at normal mode? (Level 2)",options:["A. They are in active/passive mode","B. They are in active/active mode","C. They are in active/standby mode"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:6,chapter:"ATA 70-80 NEO",q:"6. Two Translating sleeves of engine are synchronized by: (Level 3)",options:["A. Flexible shafts","B. Latching system","C. They are not synchronized at all."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:7,chapter:"ATA 70-80 NEO",q:"7. What is No. 4 Roller Bearing assembly support? (Level 3)",options:["A. The rear of HPT rotor and contains the No. 4 Bearing support, attached to the inner case","B. The rear of LPT rotor and contains the No. 4 Bearing support, attached to the outer case","C. The rear of LPT rotor and contains the No. 4 Bearing support, attached to the inner case"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:8,chapter:"ATA 70-80 NEO",q:"8. How many start bleed valve on PW1100G? (Level 1)",options:["A. 2","B. 3","C. 4"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:9,chapter:"ATA 70-80 NEO",q:"9. Throttle control system consists of? (Level 3)",options:["A. Throttle control lever, throttle control artificial feel unit, throttle control unit, electrical harness","B. Throttle control lever, throttle control artificial feel unit, throttle control unit, electrical harness, EGT thermocouple","C. Throttle control lever, throttle control artificial feel unit, electrical harness"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:10,chapter:"ATA 70-80 NEO",q:"10. How many locking actuator installed in 1 engine? (Level 2)",options:["A. 1 on LH Reverser only","B. 2","C. 1 on RH Reverser only"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:11,chapter:"ATA 70-80 NEO",q:"11. For PW 1130 Engine, the Ignition system is controlled by : (Level 2)",options:["A. EEC","B. EIU","C. PMA"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:12,chapter:"ATA 70-80 NEO",q:"12. To alert the maintenance staff to fan cowl’s not closed position: (Level 2)",options:["A. Each fan cowl latch has a proximity switch","B. The middle fan cowl latch has a proximity switch","C. Each fan cowl has a proximity switch"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:13,chapter:"ATA 70-80 NEO",q:"13. The fan speed (Nf) is used: (Level 2)",options:["A. By the EEC to detect decoupling of the fan shaft and by the PHMU to calculate trim balance solutions .","B. By the EEC to control the thrust.","C. By the EEC for indication."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:14,chapter:"ATA 70-80 NEO",q:"14. The aerodynamic station 2.5 locates at : (Level 2)",options:["A. Outlet of LPC","B. Outlet of HPC","C. Outlet of LPT"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:15,chapter:"ATA 70-80 NEO",q:"15. Each half of C ducts includes one translating sleeves, two actuators, (Level 2)",options:["A. ten blockers doors and cascades.","B. five blockers doors and cascades.","C. five blockers doors and pivoting doors."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:16,chapter:"ATA 70-80 NEO",q:"16. Fan cowls: (Level 2)",options:["A. Each of the 3 fan cowl door latches has a fan cowl door proximity sensor which is able to detect weather the relative latch is locked to alert the ground crew to the fan cowl’s position","B. Fan cowl door has two fan cowl door proximity sensors which are able to detect weather the relative latch is locked to alert the ground crew to the fan cowl’s position","C. Fan cowl door has a fan cowl door proximity sensor which is able to detect weather the relative latch is locked to alert the ground crew to the fan cowl’s position"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:17,chapter:"ATA 70-80 NEO",q:"17. “Dual Cooling” mode during engine start: (Level 2)",options:["A. ECAM Memo “DUAL COOLING” is displayed","B. Select DUAL COOLING P/B to ON, “COOLING” sequence starts after initiating engine start sequence","C. Select DUAL COOLING P/B to ON, “COOLING” sequence starts on both engine"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:18,chapter:"ATA 70-80 NEO",q:"18. How many warning level can main oil filter triggered? (Level 2)",options:["A. None","B. Clogged","C. Degraged and Clogged"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:19,chapter:"ATA 70-80 NEO",q:"19. Which sensor is used by the EEC to measure compressor discharge temperature for total temperature calculation : (Level 2)",options:["A. T2 sensor","B. T2.5 sensor","C. T3 sensor"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:20,chapter:"ATA 70-80 NEO",q:"20. The usual starter duty cycle is 3 starter crank cycles and (Level 2)",options:["A. 60 seconds cooling period between each start attempt","B. 35 seconds cooling period between each start attempt","C. 45 seconds cooling period between each start attempt"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:21,chapter:"ATA 70-80 NEO",q:"21. Which component does help in improving engine performance by reducing fan rotating speed and permitting LPC to higher speed? (Level 2)",options:["A. Fan Exit Guide Vane (VIGV)","B. Variable Inlet Guide Vanes (VIGV)","C. Fan Drive Gear System (FDGS)"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:22,chapter:"ATA 70-80 NEO",q:"22. When the throttle is between two detent points, what position corresponds to the thrust limit? (Level 2)",options:["A. The upper detent point","B. The lower detent point","C. The actual throttle lever position"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:23,chapter:"ATA 70-80 NEO",q:"23. Track Lock Valve (TLV) solenoids are controlled independently by SE (Level 2)",options:["A. Independently by EECs.","B. Independently by LGCIUs.","C. Independently by SE"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:24,chapter:"ATA 70-80 NEO",q:"24. EGT limit during engine start is : (Level 2)",options:["A. 635 deg.C","B. 725 deg.C","C. 1083.33 deg.C"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:25,chapter:"ATA 70-80 NEO",q:"25. The VVS (Variable Vanes System) actuators of LPC and HPC are : (Level 2)",options:["A. Electrically controlled by EEC and actuated by servo fuel.","B. Electrically controlled by EEC and actuated by P3 pneumatic motive air.","C. Electrically controlled and actuated by EEC ."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:26,chapter:"ATA 70-80 NEO",q:"26. The engine is attached to the pylon by Level 2)",options:["A. FWD and AFT mounts.","B. FWD, middle and AFT mounts.","C. Three mounts."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:27,chapter:"ATA 70-80 NEO",q:"27. How many Thrust Reverser cowl Door latches are there on PW 1130? (Level 1)",options:["A. 6","B. 7","C. 8"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:28,chapter:"ATA 70-80 NEO",q:"28. The annular combustion chamber houses(Level 1)",options:["A. 18 fuel nozzles(6 simplex and 12 duplex)","B. 18 fuel nozzles(9 simplex and 9 duplex)","C. 18 fuel nozzles(12 simplex and 6 duplex)"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:29,chapter:"ATA 70-80 NEO",q:"29. The engine “N2 SPEED” parameter is displayed on? (Level 1)",options:["A. The Upper ECAM","B. The Lower ECAM engine page","C. The Lower ECAM engine page or Cruise page"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:30,chapter:"ATA 70-80 NEO",q:"30. Ignition system power supply is? (Level 1)",options:["A. 115 V from the aircraft","B. 115 V from engine generator","C. 28 V from the FADEC PMA"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:31,chapter:"ATA 70-80 NEO",q:"31. The Main Oil Temperature (MOT) sensor is a dual channel sensor and is used to(Level 1)",options:["A. Measure the temperature of the scavenge oil returning to the tank","B. Measure the temperature of the lubrication oil pressure from the tank","C. Measure the pressure of the scavenge oil returning to the tank"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:32,chapter:"ATA 70-80 NEO",q:"32. The engine page is selected? (Level 1)",options:["A. Manually or automatically depend on flight phases","B. Manually only","C. Automatically only depend on flight phases"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:33,chapter:"ATA 70-80 NEO",q:"33. How many fuel nozzles are there on PW 1130 Engine? (Level 1)",options:["A. 16","B. 18","C. 20"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:34,chapter:"ATA 70-80 NEO",q:"34. Proximity sensors are installed on each latch of fan cowl doors which sends its position signal to (Level 1)",options:["A. The Engine lnterface Unit (EIU) & the EEC","B. the EEC","C. The Engine lnterface Unit (EIU)"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:35,chapter:"ATA 70-80 NEO",q:"35. The PW1000G engine unique design features: (Level 1)",options:["A. An engine fan separated from the low pressure rotor, so that each module operates at optimal speeds.","B. The engine makes use of a number of composite components including a composite fan blade, to achieve a significant weight reduction.","C. The unique debris rejection system provides the best erosion protection, preventing sand, dirt, and other harmful items from reaching the core."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:36,chapter:"ATA 70-80 NEO",q:"36. Each engine equipped with? (Level 1)",options:["A. One ignition system with two igniters","B. Two ignition systems, each has two igniters","C. Two ignition systems with two igniters"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:37,chapter:"ATA 70-80 NEO",q:"37. For de-activation thrust reverser Hydraulic Control Unit (HCU), we need to(Level 1)",options:["A. Open the oil tank access-door on the left fan cowl-door, or if necessary, open the fan cowl doors","B. Open the RH fan cowl door.","C. Open engine thust reserve doors"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:38,chapter:"ATA 70-80 NEO",q:"38. Each fan cowl door is manually opened, and held open with: (Level 1)",options:["A. Two telescopic hold open rods.","B. One telescopic and one fix hold open rods.","C. Two fix hold open rods."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:39,chapter:"ATA 70-80 NEO",q:"39. The HPC Stator Vane Actuator can control how many stage of HPC? (Level 1)",options:["A. 2","B. 3","C. 4"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:40,chapter:"ATA 70-80 NEO",q:"40. The EEC and PHMU attached to Engine Fan Case (Level 1)",options:["A. At position 12h O’clock.","B. At position 2h30 O’clock.","C. At position 4h O’clock."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:41,chapter:"ATA 70-80 NEO",q:"41. Identify the number of fuel nozzles? (Level 1)",options:["A. Twelve (12)","B. Eighteen (18)","C. Twenty two (22)"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:42,chapter:"ATA 70-80 NEO",q:"42. What is the type of bearing in FDGS? (Level 3)",options:["A. Journal Bearing","B. Tapered roller bearing","C. Oil firm Bearing"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:43,chapter:"ATA 70-80 NEO",q:"43. The operating LP compressor stator vane actuator (LPC SVA), if there is a loss of electrical power? (Level 3)",options:["A. The actuator positions vanes in the full close position for inhibited airflow through the LPC","B. The actuator positions vanes in the full open fail safe position for maximum airflow through the LPC","C. Neither Answer are corect"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:44,chapter:"ATA 70-80 NEO",q:"44. Is the purpose of the Active Clearance Control (ACC) system? (Level 3)",options:["A. To improve compressor efficiency","B. To improve and maintain engine performance","C. To reduce overall engine thermal growth"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:45,chapter:"ATA 70-80 NEO",q:"45. Sensor T3 transmits signal: (Level 3)",options:["A. Of temperature from 3rd stage of HP","B. Of temperature from last stage of HP","C. Of temperature from 3rd stage of LPT."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:46,chapter:"ATA 70-80 NEO",q:"46. To maintain the proper air pressure at bearing compartment Nos. 1,2, 3, and 5/6 for carbon seals: (Level 3)",options:["A. HPC 3rd Stage air is supplied to archive the function.","B. 2.5 bleed air is used for this function.","C. Depending on power setting 2.5 bleed air or HPC 3rd stage air is used for bearing compartments sealing/ pressurizing."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:47,chapter:"ATA 70-80 NEO",q:"47. In case of the event of Thrust control malfunction (TCM) on ground: (Level 3)",options:["A. There is no protection, the Thrust lever must be moved forward manually","B. The torque motor shuts down","C. The Engine master switch switches off immediately"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:48,chapter:"ATA 70-80 NEO",q:"48. What is the fail-safe mode of the ACC(Active Clearance Control) valve and actuator ? (Level 3)",options:["A. Closed","B. Full open","C. Partially open"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:49,chapter:"ATA 70-80 NEO",q:"49. What is fail safe position of Starter Valve? (Level 3)",options:["A. Fully closed.","B. Do not have fail safe position","C. Partition open"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:50,chapter:"ATA 70-80 NEO",q:"50. Engine’s main bearing No.1 and No.1.5 are: (Level 3)",options:["A. Oil-damped bearings","B. Tapered roller type","C. Ball type bearings"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:51,chapter:"ATA 70-80 NEO",q:"51. The PHMU (Prognostics and Health Management Unit) communicates with EEC via: (Level 3)",options:["A. ARINC 429 data bus","B. CAN (Control Area Network) data bus","C. Ethernet bus"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:52,chapter:"ATA 70-80 NEO",q:"52. How the Engine main gearbox (MGB) are driven by? (Level 3)",options:["A. N1 rotor.","B. N2 rotor via the transfer gear box","C. The Angle gearbox (AGB) extracts power from HPC and provides it to the MGB through a series of gear shafts"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:53,chapter:"ATA 70-80 NEO",q:"53. What is the fail safe position of 2.5 Bleed valve actuator? (Level 3)",options:["A. A. Fully Close","B. B. Fully open","C. C. 30% open"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:54,chapter:"ATA 70-80 NEO",q:"54. The ring of vanes of Turbine Nozzle Assembly makes? (Level 3)",options:["A. Changing the direction of the hot gases to provide optimal flow, and pressure to the 1st stage turbine blades","B. Changing the direction of the hot gases to provide optimal angle, and flow to the combustion champer","C. Changing the direction of the hot gases to provide optimal angle, pressure, and flow to the 1st stage turbine blades"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:55,chapter:"ATA 70-80 NEO",q:"55. How many locking feedback actuator install in 1 engine? (Level 2)",options:["A. 1 on RH side only","B. 2","C. 1 on LH side only"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:56,chapter:"ATA 70-80 NEO",q:"56. How does the starter operate? (Level 2)",options:["A. Hydraulically","B. Electrically","C. Pneumatically"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:57,chapter:"ATA 70-80 NEO",q:"57. For PW 1130 Engine, with the Ignition system of the engine is supply with power as follows: (Level 2)",options:["A. 115 V from the A/C electrical system","B. 115 V from PMA","C. 115 V from PMA or 115 V from the A/C electrical system depend on N2 speed"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:58,chapter:"ATA 70-80 NEO",q:"58. The Air Starter is mounted on (Level 2)",options:["A. the right side aft of the MGB","B. the left side aft of the MGB","C. the fan cowl area"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:59,chapter:"ATA 70-80 NEO",q:"59. Which component modulates flow of oil based on engine power settings? (Level 2)",options:["A. VORV/JOSV","B. FOHEBV","C. IDGOOHE"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:60,chapter:"ATA 70-80 NEO",q:"60. Is fuel flow used to cool down IDG oil and engine oil through? (Level 2)",options:["A. Integrated Fuel Pump and Control","B. Fuel/Oil Heat Exchanger","C. Return-To-Tank valve"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:61,chapter:"ATA 70-80 NEO",q:"61. The Engine Drain System collects and discharged fluids from engine and pylon through drain outlets located: (Level 2)",options:["A. On the sides of the drain mast.","B. On the bottom of the drain mast.","C. On the side and bottom of the drain mast."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:62,chapter:"ATA 70-80 NEO",q:"62. To open the PW1100G engine’s thrust reverser cowls (Level 2)",options:["A. Slats must be fully retracted","B. Slats must be fully extended","C. Slats can be at any position"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:63,chapter:"ATA 70-80 NEO",q:"63. The IGN indication is displayed on? (Level 2)",options:["A. The Upper ECAM during engine start","B. The Lower ECAM engine page during engine start","C. The Lower ECAM engine page or Cruise page"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:64,chapter:"ATA 70-80 NEO",q:"64. The Fan rotor contributes to approximately (Level 1)",options:["A. 70% of the thrust.","B. 80% of the thrust.","C. 90% of the thrust."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:65,chapter:"ATA 70-80 NEO",q:"65. ENG PW110G Equips with Aircraft Model: (Level 1)",options:["A. A321 only.","B. A320 only.","C. A319, A320, A321."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:66,chapter:"ATA 70-80 NEO",q:"66. How many pump inside the Journal Bearing? (Level 1)",options:["A. 0","B. 1","C. 2"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:67,chapter:"ATA 70-80 NEO",q:"67. For maintenance the reversers can be deployed and stowed manually on the ground by: (Level 1)",options:["A. Using the Manual Drive Units (MDU) located on the lower actuators","B. The test initiated on MCDU","C. Using the Manual Drive Units (MDU) located on the upper actuators"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:68,chapter:"ATA 70-80 NEO",q:"68. In case of overspeed, EEC will control: (Level 1)",options:["A. Thrust Control Malfunction (TCM)/Overspeed TM in IFPC","B. FMV TM in IFPC","C. FDR to stop the fuel in the combustion chamber"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:69,chapter:"ATA 70-80 NEO",q:"69. What is the purpose of the Auxiliary Lubrication System? (Level 1)",options:["A. To protects the FDGS journal bearings from low oil pressure conditions in windmilling operation.","B. To provide correct oil flow to the Fan Drive Gear System and the No. 3 Bearing.","C. To controls oil flow to the No. 3 Bearing damper"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:70,chapter:"ATA 70-80 NEO",q:"70. What is the function of the PHMU (Prognostics and Health Management Unit)? (Level 3)",options:["A. To monitor engine oil debris and FDGS lubrication, also to calculates engine vibration and fan trim balance solutions.","B. To predict the engine future malfunctions","C. To back up EEC operation."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:71,chapter:"ATA 70-80 NEO",q:"71. The N1& N2 speed sensors send signals direct to(Level 1)",options:["A. The EEC","B. The PHMU.","C. The PHMU &EEC ."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:72,chapter:"ATA 70-80 NEO",q:"72. How many EGT thermocouple on PW1100G? (Level 1)",options:["A. 4","B. 6","C. 2"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:73,chapter:"ATA 70-80 NEO",q:"73. How to identify the Fan blade No.1? (Level 1)",options:["A. The number is vibro-peened on fan hub platform.","B. The number is vibro-peened on fan blade.","C. The number is vibro-peened on retaining lock ring."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:74,chapter:"ATA 70-80 NEO",q:"74. How many Bearing PW1100G has: (Level 1)",options:["A. 8","B. 7","C. 4"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:75,chapter:"ATA 70-80 NEO",q:"75. The Aft Engine Mount Assy supports : (Level 3)",options:["A. The engine fore-aft, side, vertical, and roll loads.","B. The engine vertical, and roll loads.","C. The engine side and vertical loads."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:76,chapter:"ATA 70-80 NEO",q:"76. The 2.5 bleed valve actuator commanded by the EEC and actuated: (Level 3)",options:["A. By P3 pneumatic motive air","B. Electrical motor","C. Servo fuel"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:77,chapter:"ATA 70-80 NEO",q:"77. What is the purpose of Buffer air heat exchanger? (Level 3)",options:["A. Provides discrete (on/off) control of HPC 3rd Stage bleed air supply to the Bearing Ventilation System","B. Use station 2.5 bleed air to cool HPC 3rd Stage Air before its delivery to the No4 Bearing housing.","C. Provide cooling buffer air to the engine main bearing compartment and prevent oil leakage"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:78,chapter:"ATA 70-80 NEO",q:"78. What is the different in starting sequence of PW1100G with V2500? (Level 3)",options:["A. Cooling time (auto dry cranking)","B. Ignition sequence","C. High pressure bleed air"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:79,chapter:"ATA 70-80 NEO",q:"79. How many preservation methods are used for the protection of out-of-service engines? (Level 3)",options:["A. 3: Preserve the engine for 30 days, or 60 days, or 90 days.","B. 2: Preserve the engine for 30 days, or 60 days.","C. 2: Preserve the engine for more than 60 days or for 60 days or less."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:80,chapter:"ATA 70-80 NEO",q:"80. What is the purpose of Compressor Intermediate Case (CIC)? (Level 3)",options:["A. Providing a flow path for engine core airflow coming from the LPC to the HPC","B. Providing a flow path for engine core airflow coming from the Fan Intermediate Case (FIC) to the LPC","C. Neither Answer above are corect"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:81,chapter:"ATA 70-80 NEO",q:"81. The PHMU (Prognostics and Health Management Unit ) communicates with EEC via: (Level 3)",options:["A. ARINC 429 data bus","B. CAN (Control Area Network ) data bus","C. Ethernet bus"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:82,chapter:"ATA 70-80 NEO",q:"82. What is the new component on Oil Monitoring system compare to V2500? (Level 3)",options:["A. Master Magnetic Chip Detector","B. Oil Debris Monitoring","C. Last Chance Strainer"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:83,chapter:"ATA 70-80 NEO",q:"83. The ACC (Active Clearance Control) System uses fan air to : (Level 3)",options:["A. Cool turbine’s blades and vanes","B. Cool turbine cases to improve the fuel efficiency","C. Cool bearing compartments"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:84,chapter:"ATA 70-80 NEO",q:"84. For PW 1130 Engine, The ENG Drain mast gives a leak path exit for hydraulic, oil and : (level 3)",options:["A. Fuel component","B. Reverser system actuators","C. Permanent Magnet Altenator (PMA)"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:85,chapter:"ATA 70-80 NEO",q:"85. When the fuel filter becomes blocked by contamination: (Level 3)",options:["A. 'Fuel filter degraded' message generated on ECAM.","B. 'Fuel filter clogged' message generated on ECAM.","C. 'Fuel filter degraded' or 'Fuel filter clogged' message generated on ECAM depending on specific differential pressure values."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:86,chapter:"ATA 70-80 NEO",q:"86. Which stage the start bleed valve install on? (Level 2)",options:["A. 6th","B. 7th","C. 8th"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:87,chapter:"ATA 70-80 NEO",q:"87. How many fan blades are there at the fan rotor? (Level 1)",options:["A. 20","B. 24","C. 36"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:88,chapter:"ATA 70-80 NEO",q:"88. The FDGS is a reduction gear mechanism which comprises of a central sun gear and (Level 1)",options:["A. Five planetary gears arranged like a star","B. Four planetary gears arranged like a star","C. Six planetary gears arranged like a star"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:89,chapter:"ATA 70-80 NEO",q:"89. How many Fan Cowl Door latches are there on PW 1130? (Level 1)",options:["A. 2","B. 3","C. 4"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:90,chapter:"ATA 70-80 NEO",q:"90. What are indication ENG speed sensors on the ECAM. (Level 1)",options:["A. Nf& N2","B. N1 & N2","C. N1 , N2 &Nf"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:91,chapter:"ATA 70-80 NEO",q:"91. The forward mount assembly bears (Level 1)",options:["A. The engine thrust, vertical and lateral loads","B. The engine vertical and radial loads","C. The engine thrust and radial loads"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:92,chapter:"ATA 70-80 NEO",q:"92. When an automatic start is manually aborted. (Level 1)",options:["A. EEC does dry motor the engine","B. EEC does not dry motor the engine","C. EEC does wet motor the engine"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:93,chapter:"ATA 70-80 NEO",q:"93. The engine EGT is sensed and averaged by (Level 1)",options:["A. Five thermocouple probes (T5 probes)","B. Four thermocouple probes (T5 probes)","C. Six thermocouple probes (T5 probes)"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:94,chapter:"ATA 70-80 NEO",q:"94. How many blocker door on each reverser half? (Level 1)",options:["A. 5","B. 6","C. 4"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:95,chapter:"ATA 70-80 NEO",q:"95. A single stage Variable Inlet Guide Vanes (VIGVs) which direct the air to the LP Compressor at the correct angle and (Level 1)",options:["A. Are controlled by the PHMU","B. Are controlled by the EEC","C. Are not controlled by the EEC"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:96,chapter:"ATA 70-80 NEO",q:"96. How many pump stage on LSOP? (Level 3)",options:["A. 1 supply pump and 6 scavenge pumps","B. 2 supply pumps and 5 scavenge pumps","C. 1 supply pump and 5 scavenge pumps"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:97,chapter:"ATA 70-80 NEO",q:"97. Nacelle system components provide the engine with the capabilities: (Level 3)",options:["A. An aerodynamic for engine mounted components","B. An aerodynamic and protective enclosure for engine mounted components; Collection and discharge of oil, fuel and hydraulic fluid from the engine and its components","C. An aerodynamic and protective enclosure for engine mounted components; Collection and discharge of oil, fuel from the engine and its components."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:98,chapter:"ATA 70-80 NEO",q:"98. Which is bleed air system used to improve engine startup performance? (Level 3)",options:["A. The HPC Bleed air system bleeds 6th stage HPC air","B. The HPC Bleed air system bleeds 8th stage HPC air","C. The LPC Bleed air system bleeds 8th stage HPC air"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:99,chapter:"ATA 70-80 NEO",q:"99. In what conditions is the automatic dual-igniter continuous ignition provided by EEC? (Level 3)",options:["A. An engine flameout or a surge during takeoff or when fuel cutback due to Thrust Control Malfunction (TCM)","B. FADEC failure","C. Exciter Unit failure"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:100,chapter:"ATA 70-80 NEO",q:"100. What is the purpose of LPBSOV - Low pressure buffer shutoff valve? (Level 3)",options:["A. Provides discrete (on/off) control of HPC 3rd Stage servo pressure sent to the LPBSOV","B. Direct buffer air to the Bearing Ventilation System)","C. Provides discrete (on/off) control of HPC 3rd Stage bleed air supply to the Bearing Ventilation System."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:101,chapter:"ATA 70-80 NEO",q:"101. Is fuel flow used to cool down IDG oil and engine oil through? (Level 2)",options:["A. Integrated Fuel Pump and Control","B. Fuel/Oil Heat Exchanger","C. Return-To-Tank valve"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:102,chapter:"ATA 70-80 NEO",q:"102. Fluids drained from the pylon are? (Level 2)",options:["A. Fuel, oil or hydraulic","B. Fuel, oil or water","C. Fuel, hydraulic or water"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:103,chapter:"ATA 70-80 NEO",q:"103. Each half of reverser cowl doors: (Level 2)",options:["A. Is held closed by 4 latches","B. Is held open by a hold open rod and an opening actuator","C. Is held open by two hold open rods"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:104,chapter:"ATA 70-80 NEO",q:"104. The geared turbo fan engine reduces the CO2 and NOx emissions and provides improved(Level 1)",options:["A. Fuel efficiency and low cost","B. Fuel efficiency and reduces engine noise.","C. Fuel efficiency and reduces flight range"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:105,chapter:"ATA 70-80 NEO",q:"105. How many latches are used to fully closed reversers? (Level 1)",options:["A. 7","B. 5","C. 6"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:106,chapter:"ATA 70-80 NEO",q:"106. How many Hold Open Rod on each Reverser half? (Level 1)",options:["A. 1","B. 2","C. 3"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:107,chapter:"ATA 70-80 NEO",q:"107. The PW1100G-JM engine’s stage counting is as follow: (Level 3)",options:["A. 1-4-9-1-5","B. 1-G-4-10-2-5","C. 1-G-3-8-2-3"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:108,chapter:"ATA 70-80 NEO",q:"108. The PW1100G engine unique design features : (Level 3)",options:["A. An engine fan separated from the low pressure rotor, so that each module operates at optimal speeds.","B. The engine makes use of a number of composite components including a composite fan blade, to achieve a significant weight reduction.","C. The unique debris rejection system provides the best erosion protection, preventing sand, dirt, and other harmful items from reaching the core."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:109,chapter:"ATA 70-80 NEO",q:"109. What happen in case of a surge is detected in flight or during take-off? (Level 3)",options:["A. Igniters will be powered until 30 seconds after the surge recovers","B. Only one igniter will be powered, the other will be hot standby","C. Igniters will be powered and cut-off immediately after the surge recovers"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:110,chapter:"ATA 70-80 NEO",q:"110. Air Starter used oil for cooling and lubricating from… ? (Level 3)",options:["A. Starter lubricating system","B. Engine Lubricating system.","C. IDG lubricating system"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:111,chapter:"ATA 70-80 NEO",q:"111. The FADEC consists of? (Level 3)",options:["A. EEC and PHMU","B. EEC, PHMU and sensors","C. EEC, PHMU, sensors and output drivers"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:112,chapter:"ATA 70-80 NEO",q:"112. What is the normal engine throttle cruise detent point? (Level 2)",options:["A. CL","B. FLX/MCT","C. TOGA"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:113,chapter:"ATA 70-80 NEO",q:"113. The Fan Drive Gear System (FDGS) is made up of: (Level 2)",options:["A. A central gear surrounded by three star gears which are supported by journal bearings","B. A central sun gear surrounded by five star gears which are supported by journal bearings and an outer ring gear","C. A central sun gear surrounded by five star gears which are supported by an outer ring gear"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:114,chapter:"ATA 70-80 NEO",q:"114. The primary structure of the PW1100G-JM engine are: (Level 2)",options:["A. FIC ( Fan Intermadiate Case) and TIC ( Turbine Intermediate Case)","B. CIC ( Compressor Intermediate Case) and TEC ( Turbine Exhaust Case)","C. Fan case and TIC ( Turbine Intermediate Case)"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:115,chapter:"ATA 70-80 NEO",q:"115. The fan rotational speeds being lower (Level 1)",options:["A. Helps in reducing rotational loads and bird strike fan damage.","B. Helps in increasing rotational loads and bird strike fan damage.","C. Helps in reducing rotational loads."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:116,chapter:"ATA 70-80 NEO",q:"116. The inlet cone is made of composite material and is anti-iced with a continuous airflow from (Level 1)",options:["A. The HP compressor stage","B. The 2.5 compressor stage","C. The ram air inlet"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:117,chapter:"ATA 70-80 NEO",q:"117. Identify the number of blades in one engine fan set? (Level 1)",options:["A. Thirty six (36)","B. Twenty (20)","C. Twenty two (22)"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:118,chapter:"ATA 70-80 NEO",q:"118. How many type of Engine main bearings : (Level 1)",options:["A. Three types of bearing: Roller bearing with alignment and load: axial; Ball bearing and Tapered roller bearing with alignment and load: axial and radial","B. Three types of bearing: Roller bearing with alignment and load: radial; Ball bearing and Tapered roller bearing with alignment and load: axial and radial","C. Three types of bearing: Roller bearing with alignment and load radial; Ball bearing and Tapered roller bearing with alignment and load axial"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:119,chapter:"ATA 70-80 NEO",q:"119. The normal duty cycle of starter of the engine PW1100G is: (Level 1)",options:["A. Three attempts with 35 seconds cooling period between two attempts and total cumulative time is less than 15 min.","B. Three attempts , each attempt last less than 3 minutes with 35 seconds cooling period between two attempts .","C. Three attempts , each attempt last less than 5 minutes with 35 seconds cooling period between two attempts ."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:120,chapter:"ATA 70-80 NEO",q:"120. The engine oil quantity parameters are displayed on? (Level 1)",options:["A. The Lower ECAM engine page","B. The Lower ECAM engine page or Cruise page","C. The Upper ECAM"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:121,chapter:"ATA 70-80 NEO",q:"121. The FDGS permits the LPC to rotate at a higher speed and (Level 1)",options:["A. Helps in reducing the fan rotating speed .","B. Helps in increasing the fan rotating speed .","C. Helps in remaining the fan rotating speed constant."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:122,chapter:"ATA 70-80 NEO",q:"122. For PW 1130 Engine, The Starter Air oil system is: (Level 3)",options:["A. Independent","B. Using with Engine Oil System","C. Using IDG Oil System"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:123,chapter:"ATA 70-80 NEO",q:"123. What is Integrated fuel pump and control (IFPC) for? (Level 3)",options:["A. IFPC supplies metered fuel flow to the engine as scheduled by the EEC","B. IFPC supplies pressurized fuel to engine component actuators","C. Both answer are correct"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:124,chapter:"ATA 70-80 NEO",q:"124. How is the Return-to-Tank (RTT) valve controlled? (Level 3)",options:["A. By the EEC and is actuated based on aircraft altitude, ambient temperature, and fuel flow.","B. By the PHMU and is actuated based on fuel temperature.","C. By the EIU and is actuated based on fuel temperature."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:125,chapter:"ATA 70-80 NEO",q:"125. For PW 1130 Engine, When slats are extended, can you fully open reverser cowls? (Level 3)",options:["A. Yes","B. No, you must not open the reverser cowl when the slats are extended","C. Yes, if open by hand"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:126,chapter:"ATA 70-80 NEO",q:"126. The PW110G Engine rating adjusted by: (Level 1)",options:["A. MCDU.","B. DSU.","C. Cannot be adjusted."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:127,chapter:"ATA 70-80 NEO",q:"127. The fan speed (Nf) speed sensors send signals direct to (Level 1)",options:["A. The PHMU &EEC.","B. The PHMU.","C. The EEC ."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:128,chapter:"ATA 70-80 NEO",q:"128. The LPCompressor has how many stages? (Level 1)",options:["A. Only one stage","B. Two stages","C. Three stages"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:129,chapter:"ATA 70-80 NEO",q:"129. The collected fuel remains in ecology collector tank is drawn back into fuel system when? (Level 3)",options:["A. Next engine start up","B. Last engine shut down","C. Aircraft is energized"],answer:0},
+{chapterID:"ATA_70_NEO",questionID:130,chapter:"ATA 70-80 NEO",q:"130. The fuel used indication is reset to Zero: (Level 2)",options:["A. Five minutes after engine shut down","B. After a new take-off","C. At each engine start"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:131,chapter:"ATA 70-80 NEO",q:"131. What is 5 major function of air system on PW1100G? (Level 3) 1. increase engine operability and stability, 2. reduce noise from engine 3. cool engine parts 4. improve fuel effiency, 5. remove ingested debris from the airstream. 6. supply bleed air for ESC 7. pressurize and seal bearing compartments",options:["A. 1, 2, 3, 4, 5","B. 1, 3, 4, 5, 7","C. 1, 3, 4, 6, 7"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:132,chapter:"ATA 70-80 NEO",q:"132. What is the function of the PHMU (Prognostics and Health Management Unit)? (Level 3)",options:["A. To monitor engine oil debris and FDGS lubrication. Also to calculates engine vibration and fan trim balance solutions.","B. To predict the engine future malfunctions","C. To back up EEC operation."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:133,chapter:"ATA 70-80 NEO",q:"133. The EEC will abort a start, will not dry motor the engine and will not attempt a restart if (Level 3)",options:["A. the starter duty cycle is exceeded.","B. EEC unable to control fuel flow.","C. N 1 locked rotor."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:134,chapter:"ATA 70-80 NEO",q:"134. To minimize the build-up of carbon in the combustion chamber and to reduces toxic gas emissions at engine shutdown: (Level 3)",options:["A. Remaining fuel from the primary and secondary lines is collected and discharged overboad through drain mast.","B. Remaining fuel from the primary and secondary lines is purged into combustion chamber.","C. Remaining fuel from the primary and secondary lines is drained and collected in recovery tank and reused at next startup."],answer:2},
+{chapterID:"ATA_70_NEO",questionID:135,chapter:"ATA 70-80 NEO",q:"135. What is the N2 speed sensor located on? (Level 2)",options:["A. Main Gearbox","B. N2","C. Angle Gearbox"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:136,chapter:"ATA 70-80 NEO",q:"136. Which component divides the fuel to primary and secondary manifold? (Level3)",options:["A. Fuel Metering Valve.","B. Fuel Divider Valve.","C. Pressure Regulating Valve."],answer:1},
+{chapterID:"ATA_70_NEO",questionID:137,chapter:"ATA 70-80 NEO",q:"137. Fan Drive Gear System (FDGS) basically is: (Level 3)",options:["A. Worm gearbox","B. Differential gearbox","C. Planetary gearbox"],answer:2},
+{chapterID:"ATA_70_NEO",questionID:138,chapter:"ATA 70-80 NEO",q:"138. How to improve engine startup performance by the HPC Air System? (Level 3)",options:["A. By 2.5 bleed air valve","B. By two HPC bleed valves","C. By three HPC bleed valve"],answer:1},
+{chapterID:"ATA_70_NEO",questionID:139,chapter:"ATA 70-80 NEO",q:"139. The engine rotor comprises (Level 1)",options:["A. A single stage fan rotor, 3 stage LP Compressor,8 stage HP Compressor,2 stage HP turbine and 3 stage Lp turbine.","B. A single stage fan rotor, 3 stage LP Compressor,9 stage HP Compressor,2 stage HP turbine and 3 stage Lp turbine.","C. A single stage fan rotor, 4 stage LP Compressor,8 stage HP Compressor,2 stage HP turbine and 3 stage Lp turbine."],answer:0},
+{chapterID:"ATA_70_NEO",questionID:140,chapter:"ATA 70-80 NEO",q:"140. What does the FMGC compute? (Level 1)",options:["A. N1 limit","B. N1 target","C. N1 command"],answer:1},
+
+];
+
+
+
+/* =========================
+   LOGIC (DON'T TOUCH)
+   ========================= */
+
+let questions = [];
+
+let wrongQuestions = {}; /* 08/08/26 */
+let reviewWrongMode = false; /* 01/08/26 */
+
+/* Shuffle array */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* Shuffle answers */
+function shuffleOptions(q) {
+  const paired = q.options.map((opt, i) => ({
+    text: opt,
+    correct: i === q.answer
+  }));
+  shuffleArray(paired);
+  q.options = paired.map(p => p.text);
+  q.answer = paired.findIndex(p => p.correct);
+}
+
+/* Render quiz */
+function renderQuiz() {
+  const quizDiv = document.getElementById("quiz");
+  quizDiv.innerHTML = "";
+  document.getElementById("score").innerText = "";
+
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${i+1}. ${q.q}</p>`;
+    q.options.forEach((opt, j) => {
+      html += `
+        <label class="option" data-q="${i}" data-o="${j}">
+          <input type="radio" name="q${i}" value="${j}" onchange="handleInstant(${i})">
+          <span>${opt}</span>
+        </label><br>
+      `;
+    });
+    html += `</div>`;
+    quizDiv.innerHTML += html;
+  });
+}
+
+/* Submit */
+function submitQuiz() {
+  let score = 0;
+
+  questions.forEach((q, i) => {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const labels = document.querySelectorAll(`label[data-q="${i}"]`);
+
+    labels.forEach((label, j) => {
+      if (j === q.answer) label.classList.add("correct");
+      if (selected && j === +selected.value && j !== q.answer) {
+        label.classList.add("wrong");
+        // wrongQuestions.add(q.originalIndex); /* 01/08/26 */
+        if (!wrongQuestions[q.chapterID]) {
+            wrongQuestions[q.chapterID] = new Set();
+        }
+
+        wrongQuestions[q.chapterID].add(q.questionID);
+      }
+    });
+
+    if (selected && +selected.value === q.answer) score++;
+
+    document
+      .querySelectorAll(`input[name="q${i}"]`)
+      .forEach(r => r.disabled = true);
+  });
+
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  let correct_percentage = ((score / questions.length) * 100).toFixed(2);
+
+  document.getElementById("score").innerText =
+    `Score: ${score} / ${questions.length} (${correct_percentage}%)`;
+}
+
+/* Instant Feedback */
+function handleInstant(qIndex) {
+  if (!document.getElementById("instantToggle").checked) return;
+
+  const q = questions[qIndex];
+  const selected = document.querySelector(`input[name="q${qIndex}"]:checked`);
+  const labels = document.querySelectorAll(`label[data-q="${qIndex}"]`);
+
+  labels.forEach((label, j) => {
+    if (j === q.answer) label.classList.add("correct");
+    if (selected && j === +selected.value && j !== q.answer) {
+      label.classList.add("wrong");
+      if (!wrongQuestions[q.chapterID]) {
+          wrongQuestions[q.chapterID] = new Set();
+      }
+
+      wrongQuestions[q.chapterID].add(q.questionID); /* 08/08/26 */
+    }
+  });
+
+  
+  updateWrongQuestionList(); /* 01/08/26 */
+
+  // Lock this question
+  document
+    .querySelectorAll(`input[name="q${qIndex}"]`)
+    .forEach(r => r.disabled = true);
+}
+
+
+/* Reset */
+function resetQuiz() {
+  const shuffleEnabled = document.getElementById("shuffleToggle").checked;
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let count = parseInt(document.getElementById("questionCount").value);
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  // Get chapter pool
+  let pool = originalQuestions
+      .filter(q => q.chapter === selectedChapter)
+      .map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */ // ver2 //
+
+  if (pool.length === 0) {
+    alert("No questions in this chapter.");
+    return;
+  }
+
+  // Clamp range
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  // Apply range (convert to 0-based index)
+  pool = pool.slice(start - 1, end);
+
+  // Fix count
+  if (isNaN(count) || count < 1) count = pool.length;
+  if (count > pool.length) count = pool.length;
+
+  // Deep copy
+  // pool = JSON.parse(JSON.stringify(pool)); // ver 1 //
+  
+  pool = pool.map(q => JSON.parse(JSON.stringify(q))); /* 01/08/26 */
+
+  // Shuffle questions if enabled
+  if (shuffleEnabled) shuffleArray(pool);
+
+  // Pick N
+  questions = pool.slice(0, count);
+
+  // Shuffle answers if enabled
+  if (shuffleEnabled) {
+    questions.forEach(shuffleOptions);
+  }
+
+  renderQuiz();
+}
+
+
+/* Question Subsets Selection */
+function populateChapterSelect() {
+  const select = document.getElementById("chapterSelect");
+  select.innerHTML = "";
+
+  const chapters = [...new Set(originalQuestions.map(q => q.chapter))];
+
+  chapters.forEach(ch => {
+    const opt = document.createElement("option");
+    opt.value = ch;
+    opt.textContent = ch;
+    select.appendChild(opt);
+  });
+
+  updateChapterSize(); //
+}
+
+function selectAllInChapter() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  let start = parseInt(document.getElementById("rangeStart").value);
+  let end = parseInt(document.getElementById("rangeEnd").value);
+
+  let pool = originalQuestions.filter(q => q.chapter === selectedChapter);
+
+  if (isNaN(start) || start < 1) start = 1;
+  if (isNaN(end) || end > pool.length) end = pool.length;
+
+  if (start > end) [start, end] = [end, start];
+
+  const rangeSize = end - start + 1;
+
+  document.getElementById("questionCount").value = rangeSize;
+
+  resetQuiz();
+}
+
+function updateChapterSize() {
+  const selectedChapter = document.getElementById("chapterSelect").value;
+
+  const size = originalQuestions.filter(
+    q => q.chapter === selectedChapter
+  ).length;
+
+  document.getElementById("chapterSize").textContent =
+    `(${size} questions)`;
+
+  // Reset range to full chapter
+  document.getElementById("rangeStart").value = 1;
+  document.getElementById("rangeEnd").value = size;
+}
+
+/* Wrong Quesions Storing and Recalling*/
+function updateWrongQuestionList(){
+
+    const list =
+        document.getElementById("wrongList");
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        list.innerHTML="None";
+        return;
+    }
+
+
+    list.innerHTML =
+        [...wrongQuestions[chapterID]]
+        .sort((a,b)=>a-b)
+        .join(", ");
+
+}
+
+function reviewWrongQuestions(){
+
+    const shuffleEnabled =
+        document.getElementById("shuffleToggle").checked;
+
+    const selectedChapter =
+        document.getElementById("chapterSelect").value;
+    
+    const currentQuestion =
+        originalQuestions.find(
+            q => q.chapter === selectedChapter
+        );
+    
+    const chapterID = currentQuestion.chapterID;
+
+
+    if (!wrongQuestions[chapterID] ||
+        wrongQuestions[chapterID].size === 0){
+
+        alert("No wrong questions in this chapter.");
+        return;
+    }
+
+
+    // Get only wrong questions
+    let pool =
+        originalQuestions
+        .filter(q =>
+            q.chapterID === chapterID &&
+            wrongQuestions[chapterID]
+            .has(q.questionID)
+        )
+        .map(q =>
+            JSON.parse(JSON.stringify(q))
+        );
+
+
+    // Shuffle question order
+    if (shuffleEnabled) {
+        shuffleArray(pool);
+    }
+
+
+    // Shuffle answers
+    if (shuffleEnabled) {
+        pool.forEach(shuffleOptions);
+    }
+
+
+    questions = pool;
+    // document.getElementById("questionCount").value = questions.length;
+
+    renderQuiz();
+
+}
+
+function clearWrongQuestions(){
+
+    wrongQuestions.clear();
+
+    updateWrongQuestionList();
+
+}
+
+function chapterChanged(){
+
+    updateChapterSize();
+
+    updateWrongQuestionList();
+
+}
+
+/* Jump to Top */
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* Dark Mode */
+document.getElementById("darkToggle").addEventListener("change", e => {
+  document.body.classList.toggle("dark", e.target.checked);
+});
+
+
+/* Initial load */
+
+originalQuestions.forEach((q, i) => {
+    q.originalIndex = i;
+});
+
+populateChapterSelect();
+resetQuiz();
+</script>
+
+</body>
+</html>
